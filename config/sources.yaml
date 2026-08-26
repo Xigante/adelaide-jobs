@@ -1,0 +1,87 @@
+# ════════════════════════════════════════════════════════════════════
+#  Fontes de coleta. `enabled: false` deixa o código pronto mas
+#  desligado — nada roda sem você mandar.
+# ════════════════════════════════════════════════════════════════════
+
+adzuna:
+  enabled: true
+  legitimacy: official_api      # API oficial, chave gratuita
+  country: au
+  where: "Adelaide"
+  distance_km: 25
+  # Termos de busca. Um request por termo.
+  queries:
+    - kitchen hand
+    - night fill
+    - cleaner
+    - warehouse assistant
+    - food production
+    - retail assistant
+    - dishwasher
+  results_per_page: 50
+  max_pages: 2
+  # Limites publicados nos termos da Adzuna: 25/min, 250/dia, 2500/mês.
+  min_seconds_between_calls: 3
+
+ats:
+  enabled: true
+  legitimacy: public_endpoint   # endpoints públicos dos empregadores
+  # Requer: pip install "adelaide-jobs[ats]"
+  targets:
+    - name: Bunnings
+      kind: workday
+      url: https://bunnings.wd3.myworkdayjobs.com/careers
+    - name: Hungry Jack's
+      kind: workday
+      url: https://hungryjacks.wd105.myworkdayjobs.com/HungryJacksCareers
+    - name: Flinders University
+      kind: workday
+      url: https://flinders.wd3.myworkdayjobs.com/flinders_employment
+    - name: McDonald's Australia
+      kind: smartrecruiters
+      slug: McDonaldsAustralia
+    - name: Guzman y Gomez
+      kind: smartrecruiters
+      slug: GuzmanYGomez
+  # Só guarda vagas cuja localização casa com um destes.
+  location_filter:
+    - adelaide
+    - south australia
+    - " sa "
+    - " sa,"
+
+seek_v5:
+  # ⚠️ DESLIGADO POR PADRÃO — LEIA ANTES DE LIGAR.
+  #
+  # A v5 é a API interna do SEEK, sem autenticação. Ela funciona e
+  # aceita `where=All Adelaide SA`. Usá-la viola os Termos de Uso do
+  # SEEK, que proíbem acesso automatizado.
+  #
+  # Isso não é crime — é inadimplemento contratual. Mas a consequência
+  # prática é bloqueio de IP ou da conta, e a sua conta do SEEK vai ser
+  # o canal principal de emprego da cidade onde você mora.
+  #
+  # Se ligar: rate limit conservador, uma requisição por vez, e nunca
+  # na mesma sessão/IP em que você navega logado.
+  enabled: false
+  legitimacy: against_tos
+  where: "All Adelaide SA"
+  # Código da classificação. Descubra filtrando no site do SEEK e
+  # lendo o número na URL — não confie em lista achada em blog.
+  # 6281 = Information & Communication Technology (exemplo).
+  classification: ""
+  page_size: 20
+  max_pages: 3
+  min_seconds_between_calls: 8
+
+email_alerts:
+  # Fase 2. A via de menor risco: seus próprios dados, na sua caixa.
+  enabled: false
+  legitimacy: own_data
+  senders:
+    - jobmail@seek.com.au
+    - noreply@seek.com.au
+    - alert@indeed.com
+    - noreply@au.indeed.com
+    - noreply@jora.com
+  since_days: 3

@@ -1,0 +1,28 @@
+# ambiente
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# segredos — NUNCA commitar
+.env
+credentials/
+*.credentials.json
+service-account*.json
+
+# dados locais
+data/
+*.db
+*.sqlite3
+exports/
+.cache/
+
+# SO
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,28 @@
+{
+  "totalCount": 2,
+  "data": [
+    {
+      "id": 84120001,
+      "title": "Kitchenhand / Dishwasher",
+      "teaser": "Casual kitchenhand wanted for busy Adelaide CBD cafe. No experience required, we will train you. Afternoon and evening shifts available.",
+      "companyName": "Grenfell Street Cafe",
+      "advertiser": {"id": "12345", "description": "Grenfell Street Cafe"},
+      "location": {"label": "Adelaide"},
+      "area": {"label": "Adelaide SA"},
+      "workTypes": ["Casual/Vacation"],
+      "listingDate": "2026-08-25T23:14:00Z",
+      "salaryLabel": "$30 - $34 per hour"
+    },
+    {
+      "id": 84120002,
+      "title": "Cleaner - Early Morning",
+      "teaser": "Commercial cleaning role, early morning starts from 5am. Police check required. Own transport preferred.",
+      "companyName": "SA Commercial Cleaning",
+      "advertiser": {"id": "67890", "description": "SA Commercial Cleaning"},
+      "location": {"label": "Port Adelaide"},
+      "area": {"label": "Adelaide SA"},
+      "workTypes": ["Part time"],
+      "listingDate": "2026-08-26T02:30:00Z"
+    }
+  ]
+}

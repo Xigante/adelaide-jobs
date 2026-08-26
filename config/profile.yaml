@@ -1,0 +1,93 @@
+# ════════════════════════════════════════════════════════════════════
+#  Perfil — fonte única da verdade. Tudo no pipeline deriva daqui.
+#  Mudou de situação? Mude aqui, não no código.
+# ════════════════════════════════════════════════════════════════════
+profile_version: "2026.08"
+
+identity:
+  name: "Pedro Albertasse"
+  arrival_date: 2026-09-24
+
+visa:
+  subclass: 500
+  condition: 8105
+  cap_hours_fortnight: 48
+  # Teto operacional abaixo do legal: turno casual estoura, e a
+  # responsabilidade pelo limite é sua, não do empregador.
+  operational_cap: 44
+
+study:
+  provider: "ILSC Adelaide"
+  address: "115 Grenfell St, Adelaide SA 5000"
+  lat: -34.9235
+  lon: 138.6055
+  # AM | PM | UNKNOWN — trava ou destrava turnos inteiros.
+  # Deixe UNKNOWN até a matrícula confirmar. O scorer trata
+  # conflito de horário como penalidade parcial enquanto for UNKNOWN.
+  class_pattern: UNKNOWN
+
+english:
+  cefr_on_arrival: A2
+
+transport:
+  has_au_drivers_licence: false
+  has_car: false
+  max_commute_km: 25
+  # Turno que termina depois disso tem risco de não ter transporte
+  # de volta ao CBD.
+  late_return_risk_after: "23:30"
+
+experience_years:
+  hospitality: 0
+  retail: 0
+  warehouse: 0
+  cleaning: 0
+  office_data: 3
+
+certifications: []   # RSA, White Card, Food Handling: nenhum ainda
+
+objectives:
+  primary: CASUAL_ENTRY_BACK_OF_HOUSE
+  secondary: OFFICE_ADMIN_DATA
+
+# ─── Pesos do score (somam 100) ─────────────────────────────────────
+# Versionados: mude o número da versão ao mexer nos pesos, para
+# conseguir comparar resultados antes/depois.
+scoring:
+  version: "w1"
+  weights:
+    experience_barrier: 25
+    english_load: 20
+    visa_hours_fit: 15
+    commute: 12
+    shift_fit: 10
+    certification_barrier: 8
+    employer_pattern: 6
+    career_bridge: 4
+  # Penalidade aplicada a anúncio repostado sem mudança de conteúdo.
+  ghost_penalty: 15
+  # Score mínimo para a vaga aparecer na fila de candidatura.
+  queue_threshold: 55
+
+# Termos que marcam a vaga como back-of-house (inglês baixo funciona).
+boh_keywords:
+  - kitchen hand
+  - kitchenhand
+  - dishwasher
+  - dish hand
+  - kitchen attendant
+  - night fill
+  - nightfill
+  - grocery
+  - stock
+  - picker
+  - packer
+  - storeperson
+  - warehouse
+  - cleaner
+  - cleaning
+  - housekeeping
+  - room attendant
+  - food production
+  - production worker
+  - laundry

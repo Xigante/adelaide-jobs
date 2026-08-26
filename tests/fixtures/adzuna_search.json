@@ -1,0 +1,41 @@
+{
+  "count": 3,
+  "results": [
+    {
+      "id": "4820011001",
+      "title": "Kitchen Hand - Casual - No Experience Needed",
+      "company": {"display_name": "Adelaide Bistro Group Pty Ltd"},
+      "location": {"display_name": "Adelaide, SA", "area": ["Australia", "South Australia", "Adelaide"]},
+      "latitude": -34.9285,
+      "longitude": 138.6007,
+      "description": "Busy CBD venue looking for a casual kitchen hand. No experience necessary, full training provided. Evening shifts, approximately 15-20 hours per week. Duties include dishwashing, food prep and keeping the kitchen clean. Food handling certificate desirable but not essential.",
+      "created": "2026-08-24T09:12:00Z",
+      "contract_time": "part_time",
+      "redirect_url": "https://www.adzuna.com.au/land/ad/4820011001",
+      "salary_min": 62000,
+      "salary_max": 68000
+    },
+    {
+      "id": "4820011002",
+      "title": "Night Fill Team Member",
+      "company": {"display_name": "Coles Supermarkets"},
+      "location": {"display_name": "Mile End, SA", "area": ["Australia", "South Australia", "Mile End"]},
+      "description": "Overnight grocery night fill role in our Mile End store. Shifts start at 10pm. Casual position, a few shifts per week. Full training provided. Must be able to work independently.",
+      "created": "2026-08-25T21:00:00Z",
+      "contract_time": "part_time",
+      "redirect_url": "https://www.adzuna.com.au/land/ad/4820011002"
+    },
+    {
+      "id": "4820011003",
+      "title": "Senior Restaurant Manager",
+      "company": {"display_name": "Fine Dining Adelaide"},
+      "location": {"display_name": "North Adelaide, SA", "area": ["Australia", "South Australia", "North Adelaide"]},
+      "description": "We are seeking an experienced Senior Restaurant Manager. Minimum 5 years experience in a similar role is essential. Full time position, 38 hours per week. Current Australian driver's licence and own reliable vehicle essential.",
+      "created": "2026-08-20T08:00:00Z",
+      "contract_time": "full_time",
+      "redirect_url": "https://www.adzuna.com.au/land/ad/4820011003",
+      "salary_min": 95000,
+      "salary_max": 110000
+    }
+  ]
+}
