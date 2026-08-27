@@ -11,6 +11,7 @@ pipeline, e é por onde começar.
 
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime
 from typing import Any
@@ -19,6 +20,8 @@ import httpx
 
 from ..models import EmploymentType, Job, Legitimacy
 from .base import USER_AGENT, BaseCollector, CollectorError, register
+
+log = logging.getLogger(__name__)
 
 BASE_URL = "https://api.adzuna.com/v1/api/jobs/{country}/search/{page}"
 
@@ -47,40 +50,58 @@ class AdzunaCollector(BaseCollector):
         distance = self.config.get("distance_km", 25)
         per_page = int(self.config.get("results_per_page", 50))
         max_pages = int(self.config.get("max_pages", 2))
-        queries: list[str] = self.config.get("queries") or [""]
+        queries: list[str] = self.config.get("queries") or []
+        categories: list[str] = self.config.get("categories") or []
+        cat_pages = int(self.config.get("category_max_pages", max_pages))
+
+        # Uma "varredura" é (rótulo, parâmetros extras, quantas páginas).
+        # Categoria devolve o setor inteiro perto de Adelaide; palavra-chave
+        # só o que casa a frase. A diferença é grande: "kitchen hand" traz
+        # 53, a categoria hospitality traz 1.262. Categoria vem primeiro.
+        varreduras: list[tuple[str, dict[str, Any], int]] = []
+        for cat in categories:
+            varreduras.append((f"cat:{cat}", {"category": cat}, cat_pages))
+        for query in queries:
+            varreduras.append((query, {"what": query}, max_pages))
+        if not varreduras:
+            varreduras = [("", {}, max_pages)]
 
         jobs: list[Job] = []
         with httpx.Client(timeout=30.0, headers={"User-Agent": USER_AGENT}) as client:
-            for query in queries:
-                for page in range(1, max_pages + 1):
+            for rotulo, extra, paginas in varreduras:
+                antes = len(jobs)
+                for page in range(1, paginas + 1):
                     self.throttle()
                     params = {
                         "app_id": self.app_id,
                         "app_key": self.app_key,
                         "results_per_page": per_page,
-                        "what": query,
                         "where": where,
                         "distance": distance,
                         "content-type": "application/json",
+                        **extra,
                     }
                     url = BASE_URL.format(country=country, page=page)
                     try:
                         resp = client.get(url, params=params)
                     except httpx.HTTPError as exc:
-                        self.note_error(f"rede em {query!r} p{page}: {exc}")
+                        self.note_error(f"rede em {rotulo!r} p{page}: {exc}")
                         break
                     if resp.status_code == 429:
-                        self.note_error("429 — limite da Adzuna atingido, parando")
+                        self.note_error(
+                            f"429 — limite diário da Adzuna atingido em {rotulo!r}. "
+                            f"Parando com {len(jobs)} vagas já coletadas."
+                        )
                         return jobs
                     if resp.status_code != 200:
-                        self.note_error(f"HTTP {resp.status_code} em {query!r} p{page}")
+                        self.note_error(f"HTTP {resp.status_code} em {rotulo!r} p{page}")
                         break
 
-                    payload = resp.json()
-                    results = payload.get("results") or []
-                    jobs.extend(self.parse(r, query) for r in results)
+                    results = resp.json().get("results") or []
+                    jobs.extend(self.parse(r, rotulo) for r in results)
                     if len(results) < per_page:
                         break
+                log.info("[adzuna] %s -> %d", rotulo, len(jobs) - antes)
         return jobs
 
     # Separado de `collect` de propósito: é isto que os testes exercitam,

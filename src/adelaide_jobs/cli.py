@@ -51,11 +51,29 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 
 def cmd_collect(args: argparse.Namespace) -> int:
+    from . import export
     from .pipeline import Pipeline
     cfg = config_mod.load()
     with Database(args.db) as db:
         report = Pipeline(cfg, db).run(sources=args.source or None)
         print(report.summary())
+        if args.no_export:
+            return 0
+        # Exporta sempre. O banco fica escondido no perfil do usuário de
+        # propósito (SQLite não funciona em pasta sincronizada), então sem
+        # isto ninguém acha o resultado.
+        csv_path = export.to_csv(db, "exports/fila.csv", cfg.queue_threshold)
+        html_path = export.to_html(db, "exports/vagas.html", cfg.queue_threshold)
+    print()
+    print("─" * 62)
+    print("  SEUS RESULTADOS")
+    print("─" * 62)
+    print(f"  Abra no navegador : {html_path.resolve()}")
+    print(f"  Planilha (Excel)  : {csv_path.resolve()}")
+    print(f"  Banco completo    : {Path(args.db).resolve()}")
+    print()
+    print("  Na linha de comando:  adelaide-jobs queue")
+    print()
     return 0
 
 
@@ -128,13 +146,40 @@ def cmd_export(args: argparse.Namespace) -> int:
     threshold = args.threshold if args.threshold is not None else cfg.queue_threshold
     with Database(args.db) as db:
         path = export.to_csv(db, args.csv, threshold, args.limit)
-        print(f"CSV: {path}")
+        print(f"Planilha   : {path.resolve()}")
+        pagina = export.to_html(db, args.html, threshold, args.limit)
+        print(f"Navegador  : {pagina.resolve()}")
         if args.sheets:
             try:
                 print("Sheets:", export.to_sheets(db, threshold, args.limit))
             except Exception as exc:  # noqa: BLE001
                 print(f"Sheets falhou: {exc}", file=sys.stderr)
                 return 1
+    return 0
+
+
+def cmd_onde(args: argparse.Namespace) -> int:
+    """Onde está cada arquivo. Existe porque a pergunta é inevitável."""
+    cfg_dir = config_mod.CONFIG_DIR
+    proj = cfg_dir.parent
+    itens = [
+        ("Vagas encontradas (banco)", Path(args.db)),
+        ("Relatório para abrir no navegador", proj / "exports" / "vagas.html"),
+        ("Planilha para o Excel", proj / "exports" / "fila.csv"),
+        ("Suas chaves", proj / ".env"),
+        ("Seu perfil e os pesos", cfg_dir / "profile.yaml"),
+        ("As fontes de coleta", cfg_dir / "sources.yaml"),
+    ]
+    largura = max(len(r) for r, _ in itens)
+    print()
+    for rotulo, caminho in itens:
+        caminho = caminho.resolve()
+        marca = "  " if caminho.exists() else " *"
+        print(f"{marca}{rotulo:<{largura}}  {caminho}")
+    print()
+    if any(not c.resolve().exists() for _, c in itens):
+        print("  * ainda não existe — é criado quando você roda `collect`")
+        print()
     return 0
 
 
@@ -168,6 +213,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     c = sub.add_parser("collect", help="coleta das fontes ligadas e pontua")
     c.add_argument("--source", action="append", help="limita a esta fonte (pode repetir)")
+    c.add_argument("--no-export", action="store_true", help="não gerar CSV nem HTML no fim")
     c.set_defaults(func=cmd_collect)
 
     s = sub.add_parser("score", help="pontua o que está pendente")
@@ -183,8 +229,12 @@ def build_parser() -> argparse.ArgumentParser:
     w.add_argument("cluster_id")
     w.set_defaults(func=cmd_why)
 
+    o = sub.add_parser("onde", help="mostra onde ficam os arquivos")
+    o.set_defaults(func=cmd_onde)
+
     e = sub.add_parser("export", help="exporta a fila")
     e.add_argument("--csv", default="exports/fila.csv")
+    e.add_argument("--html", default="exports/vagas.html")
     e.add_argument("--sheets", action="store_true", help="também escreve no Google Sheets")
     e.add_argument("--threshold", type=int, default=None)
     e.add_argument("--limit", type=int, default=500)

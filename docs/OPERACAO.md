@@ -50,11 +50,20 @@ Esta é a pergunta que mais volta. Os caminhos:
 | O quê | Onde | Por quê ali |
 |---|---|---|
 | **As vagas encontradas** | `C:\Users\<você>\.adelaide-jobs\jobs.db` <br> (Linux/mac: `~/.adelaide-jobs/jobs.db`) | **Fora da pasta do projeto de propósito.** O SQLite não funciona dentro do OneDrive — dá `disk I/O error`, porque precisa de travas de arquivo que pasta sincronizada não oferece |
-| **A fila em planilha** | `<projeto>/exports/fila.csv` | Gerado por `adelaide-jobs export`. Abre no Excel |
+| **O relatório para olhar** | `<projeto>/exports/vagas.html` | **Clique duplo e abre no navegador.** Gerado automaticamente no fim de cada `collect`. Tem busca e ordenação por coluna |
+| **A fila em planilha** | `<projeto>/exports/fila.csv` | Também gerado no fim do `collect`. Abre no Excel |
 | **Suas chaves** | `<projeto>/.env` | Ignorado pelo git. Nunca vai para o GitHub |
 | **Seu perfil e pesos** | `<projeto>/config/profile.yaml` | Versionado. É a fonte da verdade do que o sistema considera uma vaga boa |
 | **As fontes** | `<projeto>/config/sources.yaml` | Liga e desliga coletor, define os termos de busca |
 | **O ambiente virtual** | `C:\Users\<você>\.venvs\adelaide-jobs` | Fora do OneDrive |
+
+**Esqueceu onde está tudo?** O programa responde:
+
+```
+adelaide-jobs onde
+```
+
+Ele lista cada caminho e marca com `*` o que ainda não foi criado.
 
 Para usar outro caminho de banco:
 
@@ -62,13 +71,14 @@ Para usar outro caminho de banco:
 adelaide-jobs --db "D:\dados\vagas.db" collect
 ```
 
-### Como olhar as vagas sem o programa
+### Como olhar as vagas
 
-O `jobs.db` é um SQLite comum. Três formas:
-
-1. **`adelaide-jobs queue`** — o jeito normal, já ordenado.
-2. **`adelaide-jobs export`** e abrir `exports/fila.csv` no Excel.
-3. **[DB Browser for SQLite](https://sqlitebrowser.org/)** — grátis, abre o
+1. **`exports/vagas.html`** — clique duplo. É o caminho mais direto, e não
+   precisa de terminal para nada. Filtra enquanto você digita e reordena
+   ao clicar no cabeçalho.
+2. **`adelaide-jobs queue`** — a mesma fila no terminal.
+3. **`exports/fila.csv`** no Excel.
+4. **[DB Browser for SQLite](https://sqlitebrowser.org/)** — grátis, abre o
    arquivo e deixa você rodar SQL. Útil para perguntas que a CLI não faz:
 
 ```sql
@@ -109,6 +119,14 @@ adelaide-jobs collect --source adzuna     # só uma fonte
 Coleta das fontes ligadas no `sources.yaml`, deduplica contra o que já
 está no banco, aplica os knockouts e pontua. Imprime um resumo com quanto
 entrou, quanto era repetido, quanto foi bloqueado e por qual regra.
+
+No fim ele **gera o `exports/vagas.html` e o `exports/fila.csv` sozinho**,
+e imprime o caminho completo dos dois. Use `--no-export` para pular.
+
+A coleta da Adzuna varre **por categoria**, não só por palavra-chave.
+Categoria traz o setor inteiro num raio de 25 km; palavra-chave traz só o
+que casa a frase. A diferença é grande: "kitchen hand" devolve 53 vagas,
+a categoria de hospitality devolve 1.262.
 
 Rodar duas vezes seguidas não duplica nada — a segunda execução vê tudo
 como "já visto".
