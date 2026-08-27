@@ -17,7 +17,8 @@ fontes  →  SQLite (fonte da verdade)  →  triagem  →  score  →  CSV / She
 
 ```bash
 git clone <este-repo> && cd adelaide-jobs
-python -m venv .venv && . .venv/bin/activate      # Windows: .venv\Scripts\activate
+python -m venv ~/.venvs/adelaide-jobs             # Windows: python -m venv %USERPROFILE%\.venvs\adelaide-jobs
+. ~/.venvs/adelaide-jobs/bin/activate             # Windows: %USERPROFILE%\.venvs\adelaide-jobs\Scripts\activate
 pip install -e ".[ats,dev]"
 
 cp .env.example .env        # cole a chave da Adzuna (grátis, sai na hora)
@@ -26,8 +27,10 @@ adelaide-jobs collect       # coleta, deduplica e pontua
 adelaide-jobs queue         # a fila, melhor primeiro
 ```
 
-> **Se você usa OneDrive:** crie o `.venv` **fora** da pasta sincronizada.
-> OneDrive sincronizando um virtualenv dá conflito e lentidão.
+> **Por que o ambiente fica fora da pasta:** um virtualenv tem milhares de
+> arquivos pequenos, e o OneDrive tenta sincronizar todos. Pelo mesmo motivo
+> o banco de vagas fica em `~/.adelaide-jobs/jobs.db` — o SQLite não funciona
+> dentro de pasta sincronizada. Ver [docs/OPERACAO.md](docs/OPERACAO.md).
 
 Saída real, rodada contra as fixtures do repositório:
 
@@ -230,6 +233,14 @@ Cada coletor separa `collect()` (rede) de `parse()` (puro) — é o que torna o
 parsing testável contra fixture em disco.
 
 ---
+
+## Documentação
+
+| Documento | Para quê |
+|---|---|
+| **[docs/OPERACAO.md](docs/OPERACAO.md)** | Manual: o que é preciso, como instalar, cada comando, **onde ficam as vagas encontradas**, e a tabela de problemas conhecidos |
+| **[docs/AUTONOMIA.md](docs/AUTONOMIA.md)** | Rodar sem o Claude: trocar o extrator por outra IA (Ollama, Gemini), automatizar com agendador, calibrar os pesos com dados reais |
+| **[docs/RELATORIO.md](docs/RELATORIO.md)** | O que foi construído, o que foi validado de verdade e o que não foi, os bugs encontrados rodando, e o que falta |
 
 ## Roadmap
 

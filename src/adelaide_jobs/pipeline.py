@@ -19,7 +19,7 @@ from .dedup import (
     FUZZY_SAME, body_shingle, canon_employer, canon_key, canon_role,
     employer_is_anonymous, fuzzy_match_score,
 )
-from .extract import RuleExtractor
+from .extract import Extractor, RuleExtractor
 from .models import Job
 from .scoring import score as compute_score
 
@@ -64,10 +64,24 @@ class RunReport:
 
 
 class Pipeline:
-    def __init__(self, cfg: Config, db: Database) -> None:
+    def __init__(
+        self,
+        cfg: Config,
+        db: Database,
+        extractor: Extractor | None = None,
+    ) -> None:
+        """`extractor` é o ponto de troca da camada de inteligência.
+
+        O padrão é o `RuleExtractor`, que é regex puro: sem chave, sem
+        custo, sem rede. Qualquer objeto com `.name` e `.extract(job) ->
+        Dimensions` serve no lugar — Gemini, Ollama local, outro modelo.
+        O scorer não muda, porque ele lê `Dimensions`, não texto.
+
+        Ver docs/AUTONOMIA.md.
+        """
         self.cfg = cfg
         self.db = db
-        self.extractor = RuleExtractor(cfg.boh_keywords)
+        self.extractor: Extractor = extractor or RuleExtractor(cfg.boh_keywords)
 
     # ── dedup ────────────────────────────────────────────────────────
 
