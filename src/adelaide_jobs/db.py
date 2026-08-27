@@ -83,19 +83,61 @@ CREATE TABLE IF NOT EXISTS run_log (
 );
 """
 
-DEFAULT_DB = Path("data/jobs.db")
+# Fora da pasta do projeto de proposito. Quando o projeto vive dentro do
+# OneDrive (ou de qualquer pasta sincronizada / unidade de rede), o SQLite
+# em modo WAL falha com "disk I/O error": o WAL precisa de memoria
+# compartilhada que esses sistemas de arquivos nao oferecem. O banco fica
+# no perfil do usuario, que nunca e sincronizado.
+DEFAULT_DB = Path.home() / ".adelaide-jobs" / "jobs.db"
+
+
+class StorageUnavailable(RuntimeError):
+    """O SQLite não consegue escrever nesse caminho.
+
+    Quase sempre é pasta sincronizada (OneDrive, Dropbox, Google Drive) ou
+    unidade de rede. O erro cru do sqlite3 é só "disk I/O error", que não
+    diz nada — daí esta exceção existir.
+    """
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(
+            f"Não consegui criar o banco em {path}.\n"
+            "Isso costuma acontecer em pasta do OneDrive, Dropbox, Google Drive "
+            "ou unidade de rede: o SQLite precisa de travas de arquivo que esses "
+            "sistemas não oferecem.\n"
+            "Solução: use um caminho fora da pasta sincronizada, por exemplo\n"
+            f"    adelaide-jobs --db \"{Path.home() / '.adelaide-jobs' / 'jobs.db'}\" collect\n"
+            "(esse já é o padrão — você só cai aqui se passou --db apontando "
+            "para dentro da pasta sincronizada)."
+        )
 
 
 class Database:
     def __init__(self, path: str | Path = DEFAULT_DB) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(self.path)
-        self.conn.row_factory = sqlite3.Row
-        self.conn.execute("PRAGMA journal_mode=WAL")
-        self.conn.execute("PRAGMA foreign_keys=ON")
-        self.conn.executescript(SCHEMA)
-        self.conn.commit()
+        self.conn = self._connect(wal=True)
+        try:
+            self.conn.executescript(SCHEMA)
+            self.conn.commit()
+        except sqlite3.OperationalError:
+            # WAL precisa de memória compartilhada, que pasta sincronizada
+            # e unidade de rede não oferecem. O modo clássico resolve em
+            # boa parte desses casos — mas não em todos.
+            self.conn.close()
+            try:
+                self.conn = self._connect(wal=False)
+                self.conn.executescript(SCHEMA)
+                self.conn.commit()
+            except sqlite3.OperationalError as exc:
+                raise StorageUnavailable(self.path) from exc
+
+    def _connect(self, *, wal: bool) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.path)
+        conn.row_factory = sqlite3.Row
+        conn.execute(f"PRAGMA journal_mode={'WAL' if wal else 'DELETE'}")
+        conn.execute("PRAGMA foreign_keys=ON")
+        return conn
 
     # ── ciclo de vida ────────────────────────────────────────────────
 

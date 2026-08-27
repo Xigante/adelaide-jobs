@@ -10,14 +10,23 @@ adzuna:
   where: "Adelaide"
   distance_km: 25
   # Termos de busca. Um request por termo.
+  # Testados contra a API real em 26/08/2026, raio de 25 km de Adelaide.
+  # O numero e quantas vagas cada termo devolveu naquele dia.
   queries:
-    - kitchen hand
-    - night fill
-    - cleaner
-    - warehouse assistant
-    - food production
+    - kitchen hand          # 53
+    - cleaner               # 15+
+    - warehouse assistant   # 15+
+    - food production       # 15+
+    - nightfill supermarket # 1  — ver nota abaixo
     - retail assistant
     - dishwasher
+    - kitchen assistant
+    - housekeeping
+  # NOTA: "night fill" (com espaco) devolve ZERO na Adzuna, apesar de ser
+  # o termo usado no anuncio real de supermercado. O indice dela nao casa
+  # a expressao. Turno noturno de supermercado tem que vir da pagina de
+  # carreiras do proprio empregador (Coles, Woolworths) ou dos alertas de
+  # e-mail, nao daqui.
   results_per_page: 50
   max_pages: 2
   # Limites publicados nos termos da Adzuna: 25/min, 250/dia, 2500/mês.
