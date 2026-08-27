@@ -28,6 +28,17 @@ study:
 
 english:
   cefr_on_arrival: A2
+  # ⇩ ATUALIZE ISTO conforme o inglês melhorar. É o campo que mais muda
+  # o resultado. A1 A2 B1 B2 C1 C2.
+  #
+  # Ao subir de nível, duas coisas acontecem sozinhas: vaga com
+  # atendimento ao cliente para de ser penalizada, e o peso da dimensão
+  # de inglês cai (porque deixa de ser o gargalo), sendo redistribuído
+  # entre as outras. A soma continua 100, então as notas de meses
+  # diferentes seguem comparáveis.
+  #
+  # Depois de mudar aqui, rode:  adelaide-jobs score --rescore
+  current_level: A2
 
 transport:
   has_au_drivers_licence: false
@@ -49,6 +60,10 @@ certifications: []   # RSA, White Card, Food Handling: nenhum ainda
 objectives:
   primary: CASUAL_ENTRY_BACK_OF_HOUSE
   secondary: OFFICE_ADMIN_DATA
+  # Terceiro alvo: a formação dele. Peso pequeno (career_bridge = 4),
+  # de propósito — não pode dominar a fila nos primeiros meses. Mas se
+  # aparecer vaga boa de dados, games ou design, ela tem que ser vista.
+  tertiary: TECH_GAMES_DESIGN
 
 # ─── Pesos do score (somam 100) ─────────────────────────────────────
 # Versionados: mude o número da versão ao mexer nos pesos, para
@@ -67,7 +82,48 @@ scoring:
   # Penalidade aplicada a anúncio repostado sem mudança de conteúdo.
   ghost_penalty: 15
   # Score mínimo para a vaga aparecer na fila de candidatura.
+  # O relatório HTML mostra TUDO, com filtro por nota — este corte vale
+  # para `queue` e para o CSV.
   queue_threshold: 55
+
+# Faixas de nota. Mudar aqui não muda o score, só como ele é rotulado.
+#   A+  89-100  candidate-se hoje
+#   A   78-88   muito boa
+#   A-  70-77   boa
+#   B+  62-69   vale olhar
+#   B   55-61   talvez
+#   C   40-54   só se estiver seco
+#   D    0-39   provavelmente não
+#   X           bloqueada por um knockout
+
+# Termos que fazem a vaga contar como "ponte de carreira" — a formação
+# dele em dados, jogos e design. Adelaide tem polo de games: Mighty
+# Kingdom, Sony PlayStation, Tantalus South, Monkeystack.
+career_keywords:
+  - power bi
+  - powerbi
+  - data analyst
+  - business intelligence
+  - bi developer
+  - data engineer
+  - reporting analyst
+  - dashboard
+  - sql
+  - power automate
+  - automation
+  - generative ai
+  - game designer
+  - game analyst
+  - liveops
+  - qa tester
+  - unity
+  - unreal
+  - ux designer
+  - ui designer
+  - product designer
+  - figma
+  - admin assistant
+  - data entry
 
 # Termos que marcam a vaga como back-of-house (inglês baixo funciona).
 boh_keywords:

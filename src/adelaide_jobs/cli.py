@@ -20,7 +20,7 @@ from pathlib import Path
 from . import config as config_mod
 from .db import DEFAULT_DB, Database
 from .models import Dimensions
-from .scoring import score as compute_score
+from .scoring import nota, score as compute_score
 
 
 def _setup_logging(verbose: bool) -> None:
@@ -97,12 +97,13 @@ def cmd_queue(args: argparse.Namespace) -> int:
         if not rows:
             print("Fila vazia. Rode `collect` primeiro, ou baixe o --threshold.")
             return 0
-        print(f"{'score':>5}  {'vaga':<44} {'empregador':<22} {'local':<16} id")
+        print(f"{'nota':>4} {'pts':>4}  {'vaga':<42} {'empregador':<22} {'local':<14} id")
         print("─" * 118)
         for r in rows:
+            letra, _ = nota(r["score"])
             ghost = " 👻" if r["ghost_flag"] else ""
-            print(f"{r['score']:>5}  {(r['title'] or '')[:44]:<44} "
-                  f"{(r['employer'] or '')[:22]:<22} {(r['suburb'] or '')[:16]:<16} "
+            print(f"{letra:>4} {r['score']:>4}  {(r['title'] or '')[:42]:<42} "
+                  f"{(r['employer'] or '')[:22]:<22} {(r['suburb'] or '')[:14]:<14} "
                   f"{r['cluster_id'][:8]}{ghost}")
     return 0
 
@@ -117,7 +118,9 @@ def cmd_why(args: argparse.Namespace) -> int:
         if not row:
             print(f"Cluster {args.cluster_id!r} não encontrado.")
             return 1
+        letra, acao = nota(row["score"], row["verdict"] == "BLOCKED")
         print(f"{row['title']}  —  {row['employer'] or '(sem empregador)'}")
+        print(f"nota {letra}  ({acao})")
         print(f"{row['url']}\n")
         if row["verdict"] == "BLOCKED":
             print(f"BLOQUEADA: {row['blocked_reason']}")
@@ -129,6 +132,7 @@ def cmd_why(args: argparse.Namespace) -> int:
         breakdown = compute_score(
             dims, cfg.weights,
             class_pattern=cfg.class_pattern,
+            english_level=cfg.english_level,
             ghost=bool(row["ghost_flag"]),
             ghost_penalty=cfg.ghost_penalty,
             multi_source=row["source_count"] or 1,

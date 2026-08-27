@@ -160,11 +160,20 @@ class RuleExtractor:
 
     name = "rules"
 
-    def __init__(self, boh_keywords: list[str] | None = None) -> None:
-        kws = boh_keywords or []
-        self._boh = re.compile(
-            "|".join(re.escape(k) for k in kws), re.I
-        ) if kws else None
+    def __init__(
+        self,
+        boh_keywords: list[str] | None = None,
+        career_keywords: list[str] | None = None,
+    ) -> None:
+        self._boh = self._compilar(boh_keywords)
+        # Sem lista no config, cai no padrão embutido (CAREER_BRIDGE).
+        self._career = self._compilar(career_keywords)
+
+    @staticmethod
+    def _compilar(termos: list[str] | None) -> re.Pattern[str] | None:
+        if not termos:
+            return None
+        return re.compile("|".join(re.escape(t) for t in termos), re.I)
 
     # ── dimensões individuais ────────────────────────────────────────
 
@@ -288,7 +297,12 @@ class RuleExtractor:
             food_handling=_requirement_level(text, RE_FOOD_HANDLING),
             work_rights=self._work_rights(text),
             employer_kind=self._employer_kind(job.employer, text),
-            career_bridge=bool(CAREER_BRIDGE.search(job.title)),
+            # Procura no título E no corpo: muito anúncio de dados põe
+            # "Power BI" só nos requisitos.
+            career_bridge=bool(
+                (self._career or CAREER_BRIDGE).search(job.title)
+                or (self._career or CAREER_BRIDGE).search(text[:1500])
+            ),
             distance_km=distance,
             extractor=self.name,
         )

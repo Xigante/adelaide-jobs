@@ -81,13 +81,19 @@ def _experience_barrier(d: Dimensions) -> float:
     }.get(d.exp_req, 0.5)
 
 
-def _english_load(d: Dimensions) -> float:
+def _english_load(d: Dimensions, nivel: str = "A2") -> float:
+    """Quanto o inglês da vaga pesa contra o inglês que ele tem hoje.
+
+    Back-of-house sempre vale 1.0 — lavar louça é lavar louça em qualquer
+    idioma. O que muda com o nível é o custo de atender cliente.
+    """
+    _, medio, alto = NIVEIS_INGLES.get(nivel.upper(), NIVEIS_INGLES["A2"])
     return {
-        "BOH_MINIMAL": 1.0,   # kitchen hand com A2 funciona
-        "LOW": 0.8,
+        "BOH_MINIMAL": 1.0,
+        "LOW": 0.85,
         "UNKNOWN": 0.5,
-        "MEDIUM": 0.3,
-        "HIGH": 0.0,          # barista com A2 não funciona
+        "MEDIUM": medio,
+        "HIGH": alto,
     }.get(d.eng_contact, 0.5)
 
 
@@ -176,6 +182,76 @@ def _career_bridge(d: Dimensions) -> float:
     return 1.0 if d.career_bridge else 0.0
 
 
+# Faixas de nota. score -> (letra, o que fazer)
+FAIXAS: list[tuple[int, str, str]] = [
+    (89, "A+", "candidate-se hoje"),
+    (78, "A",  "muito boa"),
+    (70, "A-", "boa"),
+    (62, "B+", "vale olhar"),
+    (55, "B",  "talvez"),
+    (40, "C",  "só se estiver seco"),
+    (0,  "D",  "provavelmente não"),
+]
+
+
+def nota(score: int | None, bloqueada: bool = False) -> tuple[str, str]:
+    """Devolve (letra, o que fazer). Bloqueada é 'X'."""
+    if bloqueada:
+        return "X", "descartada"
+    if score is None:
+        return "?", "ainda não avaliada"
+    for corte, letra, acao in FAIXAS:
+        if score >= corte:
+            return letra, acao
+    return "D", "provavelmente não"
+
+
+# ── Nível de inglês ─────────────────────────────────────────────────
+# O inglês dele é a variável que MAIS muda ao longo do curso, e era a
+# única que o sistema tratava como fixa. Conforme sobe, duas coisas
+# acontecem: vaga com atendimento deixa de ser penalizada, e o peso da
+# dimensão de inglês cai — porque ela para de ser o gargalo.
+#
+# tabela: nível -> (multiplicador do peso, nota para MEDIUM, nota para HIGH)
+NIVEIS_INGLES: dict[str, tuple[float, float, float]] = {
+    "A1": (1.15, 0.15, 0.00),
+    "A2": (1.00, 0.30, 0.00),   # chegada
+    "B1": (0.75, 0.60, 0.20),
+    "B2": (0.50, 0.85, 0.50),
+    "C1": (0.30, 1.00, 0.80),
+    "C2": (0.20, 1.00, 0.95),
+}
+
+
+def pesos_para_ingles(weights: dict[str, int], nivel: str) -> dict[str, int]:
+    """Reduz o peso do inglês conforme ele melhora, e redistribui o resto.
+
+    Mantém a soma em 100 — senão as notas de meses diferentes deixariam
+    de ser comparáveis, e o histórico de calibração perderia o sentido.
+    """
+    mult = NIVEIS_INGLES.get(nivel.upper(), NIVEIS_INGLES["A2"])[0]
+    if mult == 1.0:
+        return dict(weights)
+
+    w = dict(weights)
+    original = w.get("english_load", 0)
+    novo = original * mult
+    sobra = original - novo
+    outros = {k: v for k, v in w.items() if k != "english_load" and v > 0}
+    total_outros = sum(outros.values()) or 1
+
+    ajustado = {"english_load": novo}
+    for k, v in outros.items():
+        ajustado[k] = v + sobra * (v / total_outros)
+    # Arredonda mantendo a soma exata em 100.
+    saida = {k: int(round(v)) for k, v in ajustado.items()}
+    diff = 100 - sum(saida.values())
+    if diff:
+        maior = max(saida, key=lambda k: saida[k])
+        saida[maior] += diff
+    return saida
+
+
 def _round_half_up(value: float) -> int:
     """Arredondamento previsível, limitado a 0–100.
 
@@ -203,16 +279,17 @@ def score(
     weights: dict[str, int] | None = None,
     *,
     class_pattern: str = "UNKNOWN",
+    english_level: str = "A2",
     ghost: bool = False,
     ghost_penalty: float = 15.0,
     multi_source: int = 1,
     version: str = "w1",
 ) -> ScoreBreakdown:
-    w = {**DEFAULT_WEIGHTS, **(weights or {})}
+    w = pesos_para_ingles({**DEFAULT_WEIGHTS, **(weights or {})}, english_level)
 
     parts = {
         "experience_barrier": _experience_barrier(dims),
-        "english_load": _english_load(dims),
+        "english_load": _english_load(dims, english_level),
         "visa_hours_fit": _visa_hours_fit(dims),
         "commute": _commute(dims),
         "shift_fit": _shift_fit(dims, class_pattern),

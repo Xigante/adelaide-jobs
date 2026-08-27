@@ -54,6 +54,15 @@ class Config:
     def boh_keywords(self) -> list[str]:
         return self.profile.get("boh_keywords") or []
 
+    @property
+    def career_keywords(self) -> list[str]:
+        return self.profile.get("career_keywords") or []
+
+    @property
+    def english_level(self) -> str:
+        eng = self.profile.get("english") or {}
+        return eng.get("current_level") or eng.get("cefr_on_arrival") or "A2"
+
     def enabled_sources(self) -> dict[str, dict[str, Any]]:
         return {k: v for k, v in self.sources.items()
                 if isinstance(v, dict) and v.get("enabled")}

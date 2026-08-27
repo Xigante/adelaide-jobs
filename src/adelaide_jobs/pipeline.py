@@ -81,7 +81,9 @@ class Pipeline:
         """
         self.cfg = cfg
         self.db = db
-        self.extractor: Extractor = extractor or RuleExtractor(cfg.boh_keywords)
+        self.extractor: Extractor = extractor or RuleExtractor(
+            cfg.boh_keywords, cfg.career_keywords
+        )
 
     # ── dedup ────────────────────────────────────────────────────────
 
@@ -196,6 +198,7 @@ class Pipeline:
                         dims,
                         self.cfg.weights,
                         class_pattern=self.cfg.class_pattern,
+                        english_level=self.cfg.english_level,
                         ghost=bool(row["ghost_flag"]),
                         ghost_penalty=self.cfg.ghost_penalty,
                         multi_source=row["source_count"] or 1,

@@ -328,6 +328,26 @@ class Database:
             (threshold, limit),
         ).fetchall()
 
+    def todas(self, limit: int = 3000) -> list[sqlite3.Row]:
+        """Tudo que foi avaliado, inclusive o que foi bloqueado.
+
+        A `queue` é a fila de trabalho e corta pelo threshold. Esta aqui
+        alimenta o relatório HTML, onde o filtro é do leitor, não meu —
+        às vezes vale ver o que foi descartado e por quê.
+        """
+        return self.conn.execute(
+            f"""SELECT c.*,
+                   (SELECT s.url FROM job_sighting s WHERE s.cluster_id = c.cluster_id
+                    ORDER BY {ORDEM_DAS_FONTES} LIMIT 1) AS melhor_url,
+                   (SELECT s.source FROM job_sighting s WHERE s.cluster_id = c.cluster_id
+                    ORDER BY {ORDEM_DAS_FONTES} LIMIT 1) AS melhor_fonte
+               FROM job_cluster c
+               WHERE c.verdict IS NOT NULL
+               ORDER BY (c.verdict = 'BLOCKED'), c.score DESC, c.last_seen DESC
+               LIMIT ?""",
+            (limit,),
+        ).fetchall()
+
     def unscored(self, limit: int = 500) -> list[sqlite3.Row]:
         return self.conn.execute(
             "SELECT * FROM job_cluster WHERE verdict IS NULL LIMIT ?", (limit,)

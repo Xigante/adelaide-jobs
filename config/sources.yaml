@@ -20,6 +20,12 @@ adzuna:
     - retail-jobs                   #   905
     - part-time-jobs                #   275
     - domestic-help-cleaning-jobs   #   226
+    # ── formação dele: dados, games, design ──────────────────────
+    # Peso pequeno no score (career_bridge = 4), mas o radar precisa
+    # ver. Adelaide tem polo de games — Mighty Kingdom, Sony
+    # PlayStation Adelaide, Tantalus South, Monkeystack.
+    - it-jobs
+    - creative-design-jobs
   # 50 por página × 5 páginas × 6 categorias = 30 requisições, até 1.500
   # vagas. O limite da Adzuna é 250 requisições/dia, então há folga larga.
   category_max_pages: 5
@@ -34,6 +40,11 @@ adzuna:
     - food production
     - housekeeping
     - nightfill supermarket # 1  — ver nota abaixo
+    # ── dados / games / design ───────────────────────────────────
+    - power bi
+    - data analyst
+    - game
+    - ux designer
   # NOTA: "night fill" (com espaço) devolve ZERO na Adzuna, apesar de ser
   # o termo do anúncio real de supermercado. O índice não casa a expressão.
   # Turno noturno tem que vir da página de carreiras do empregador
