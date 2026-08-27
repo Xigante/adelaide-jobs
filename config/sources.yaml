@@ -26,29 +26,79 @@ adzuna:
     # PlayStation Adelaide, Tantalus South, Monkeystack.
     - it-jobs
     - creative-design-jobs
-  # 50 por página × 5 páginas × 6 categorias = 30 requisições, até 1.500
-  # vagas. O limite da Adzuna é 250 requisições/dia, então há folga larga.
-  category_max_pages: 5
+  # 50 por página × 6 páginas × 8 categorias = 48 requisições, até 2.400
+  # vagas. O limite da Adzuna é 250 requisições/dia, então há folga.
+  category_max_pages: 6
 
-  # ── BUSCA POR PALAVRA (complemento, não a base) ──────────────────
-  # Pega o que escapa da categoria — anúncio classificado no lugar errado.
-  # O número é quantas vagas o termo devolveu no teste de 26/08/2026.
+  # ── BUSCA POR PALAVRA ────────────────────────────────────────────
+  # Isto aqui não é "complemento". Metade do mercado australiano só é
+  # encontrável pelo termo local exato. Descoberto em 27/08/2026 com sete
+  # agentes de pesquisa, verificando anúncios reais de Adelaide:
+  #
+  #   "night fill"  → ZERO.   "nightfill" (uma palavra só) → resultados.
+  #   "dishwasher"  → ZERO.   Na Austrália a palavra é a MÁQUINA, não a
+  #                           pessoa. Quem lava louça é "kitchen hand",
+  #                           "kitchen porter", "pot wash" ou "glassie".
+  #   "storeperson" é o termo nº 1 de armazém e não tem equivalente óbvio
+  #                           em inglês americano — sem ele você perde
+  #                           metade das vagas de logística.
+  #
+  # Cada termo custa uma requisição por página. 40 termos × 2 páginas = 80.
+  # Com as categorias: 128 de 250 por dia. Dá para rodar duas vezes.
   queries:
-    - kitchen hand          # 53
-    - dishwasher
+    # ── cozinha (back of house) ────────────────────────────────────
+    - kitchen hand
+    - kitchenhand
     - kitchen assistant
+    - kitchen porter
+    - kitchen steward
+    - pot wash
+    - food services assistant
+    - catering assistant
     - food production
+    - commis chef
+    # ── salão / eventos ────────────────────────────────────────────
+    - food and beverage attendant
+    - cafe all rounder
+    - wait staff
+    - glass collector
+    - banquet attendant
+    - event staff
+    # ── quarto / limpeza ───────────────────────────────────────────
     - housekeeping
-    - nightfill supermarket # 1  — ver nota abaixo
-    # ── dados / games / design ───────────────────────────────────
+    - room attendant
+    - public area attendant
+    - houseperson
+    - laundry attendant
+    - commercial cleaner
+    - casual cleaner
+    - hotel services assistant
+    # ── supermercado (turno noturno) ───────────────────────────────
+    - nightfill
+    - store team member
+    - grocery team member
+    - replenishment
+    - trolley collection
+    # ── armazém ────────────────────────────────────────────────────
+    - storeperson
+    - pick packer
+    - order picker
+    - freight handler
+    - process worker
+    - factory hand
+    # ── modificadores de alto rendimento ───────────────────────────
+    # Não são cargos, são as palavras que o anúncio usa quando aceita
+    # gente sem experiência local. É o filtro dele, escrito por eles.
+    - no experience
+    - immediate start
+    # ── formação: dados, games, design ─────────────────────────────
+    # ATENÇÃO: "gaming" sozinho NÃO entra. Na Austrália "gaming" quer
+    # dizer cassino e caça-níquel ("Gaming Attendant", "pokies"), não
+    # jogos digitais. O termo certo é "game developer".
     - power bi
     - data analyst
-    - game
+    - game developer
     - ux designer
-  # NOTA: "night fill" (com espaço) devolve ZERO na Adzuna, apesar de ser
-  # o termo do anúncio real de supermercado. O índice não casa a expressão.
-  # Turno noturno tem que vir da página de carreiras do empregador
-  # (Coles, Woolworths) ou dos alertas de e-mail, não daqui.
   results_per_page: 50
   max_pages: 2
   # Limites publicados nos termos da Adzuna: 25/min, 250/dia, 2500/mês.
@@ -74,12 +124,40 @@ ats:
     - name: Guzman y Gomez
       kind: smartrecruiters
       slug: GuzmanYGomez
+    # Verificado em 27/08/2026: a Posting API pública do SmartRecruiters
+    # responde sem chave em /v1/companies/ALDIStores/postings. Lojas de
+    # Adelaide + centro de distribuição de Regency Park.
+    - name: ALDI Australia
+      kind: smartrecruiters
+      slug: ALDIStores
   # Só guarda vagas cuja localização casa com um destes.
   location_filter:
     - adelaide
     - south australia
     - " sa "
     - " sa,"
+
+pageup:
+  # O ATS do setor público de Adelaide. Descoberto em 27/08/2026: o SA
+  # Health sozinho tem ~625 vagas ativas, quase todas na Grande Adelaide,
+  # e hospital emprega muito back of house — Hotel Services Assistant,
+  # Food Services Assistant, Cleaner, Ward Assistant.
+  #
+  # A listagem é HTML e pagina com ?page=N (24 por página, medido no
+  # navegador). A página de DETALHE bloqueia cliente sem navegador, então
+  # a descrição vem vazia e a vaga pontua pelo título. Clique em
+  # "Candidatar-se" para ler o anúncio inteiro.
+  enabled: true
+  legitimacy: open_robots
+  # 30 páginas × 24 = 720, mais que as 625 do SA Health. O coletor para
+  # sozinho quando a paginação repete, então sobra folga sem custo.
+  max_pages: 30
+  # Descarta o que não é Grande Adelaide (Whyalla, Port Lincoln, Mount
+  # Gambier). Ponha false se quiser o estado inteiro.
+  only_metro: true
+  targets:
+    - name: SA Health
+      url: https://careers.sahealth.sa.gov.au/caw/en/listing/
 
 seek_v5:
   # ⚠️ DESLIGADO POR PADRÃO — LEIA ANTES DE LIGAR.

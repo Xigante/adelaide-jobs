@@ -127,23 +127,57 @@ career_keywords:
 
 # Termos que marcam a vaga como back-of-house (inglês baixo funciona).
 boh_keywords:
+  # Cozinha
   - kitchen hand
   - kitchenhand
+  - kitchen assistant
+  - kitchen attendant
+  - kitchen porter
+  - kitchen steward
+  - stewarding
+  - pot wash
+  - potwasher
   - dishwasher
   - dish hand
-  - kitchen attendant
+  - dishy
+  - food services assistant
+  - food service assistant
+  - catering assistant
+  - food production
+  - back of house
+  # Salão sem muita conversa
+  - glass collector
+  - glassie
+  # Supermercado
   - night fill
   - nightfill
+  - night filler
+  - replenishment
+  - shelf stacker
   - grocery
   - stock
+  - trolley collection
+  # Armazém
+  - storeperson
+  - store person
   - picker
   - packer
-  - storeperson
+  - pick packer
+  - order picker
+  - freight handler
+  - freight sorter
+  - process worker
+  - production worker
+  - factory hand
   - warehouse
+  # Limpeza e quarto
   - cleaner
   - cleaning
   - housekeeping
+  - housekeeper
   - room attendant
-  - food production
-  - production worker
+  - public area attendant
+  - houseperson
+  - accommodation cleaner
   - laundry
+  - linen attendant

@@ -85,7 +85,12 @@ RE_FULL_RIGHTS = re.compile(
     r"|\b(?:australian\s+)?citizens?\s+(?:or|and|/)\s+(?:permanent\s+residents?|pr)\b"
     r"|\bmust\s+(?:be\s+an?\s+)?(?:hold\s+)?(?:australian\s+)?(?:citizenship|permanent residency|"
     r"citizen|permanent resident)\b"
-    r"|\b(?:baseline|nv1|nv2|negative vetting)\b", re.I,
+    r"|\b(?:baseline|nv1|nv2|negative vetting)\b"
+    # Defesa é o maior setor de tecnologia de Adelaide (AUKUS, Osborne) e
+    # clearance da AGSVA exige cidadania australiana, sem exceção para
+    # visto de estudante. Sem isto, metade dos resultados de "software
+    # engineer Adelaide" é inalcançável.
+    r"|\b(?:security|defence|defense)\s+clearance\b|\bagsva\b|\bdisp\b|\bitar\b", re.I,
 )
 RE_STUDENT_OK = re.compile(
     r"\b(student visa(?:s)? (?:welcome|accepted|ok)|working holiday|"

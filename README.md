@@ -239,6 +239,7 @@ parsing testável contra fixture em disco.
 | Documento | Para quê |
 |---|---|
 | **[docs/OPERACAO.md](docs/OPERACAO.md)** | Manual: o que é preciso, como instalar, cada comando, **onde ficam as vagas encontradas**, e a tabela de problemas conhecidos |
+| **[docs/FONTES.md](docs/FONTES.md)** | De onde vêm as vagas: o que está ligado, o que vale implementar a seguir, **o que foi descartado e por quê**, e o dicionário de como os australianos escrevem cada função |
 | **[docs/AUTONOMIA.md](docs/AUTONOMIA.md)** | Rodar sem o Claude: trocar o extrator por outra IA (Ollama, Gemini), automatizar com agendador, calibrar os pesos com dados reais |
 | **[docs/RELATORIO.md](docs/RELATORIO.md)** | O que foi construído, o que foi validado de verdade e o que não foi, os bugs encontrados rodando, e o que falta |
 

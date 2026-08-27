@@ -211,7 +211,7 @@ class Pipeline:
 
     def run(self, sources: list[str] | None = None) -> RunReport:
         from .collectors import registry
-        from .collectors import adzuna, ats, seek_v5  # noqa: F401  (registra)
+        from .collectors import adzuna, ats, pageup, seek_v5  # noqa: F401  (registra)
 
         run_id = uuid.uuid4().hex[:12]
         started = datetime.now().isoformat(timespec="seconds")

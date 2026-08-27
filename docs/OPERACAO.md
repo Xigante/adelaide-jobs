@@ -205,6 +205,40 @@ O que mais importa mexer:
   `scoring.version` junto, para conseguir comparar antes e depois.
 - **`transport.max_commute_km`** — acima disso a vaga é bloqueada.
 
+### Quando o seu inglês melhorar
+
+Este é o ajuste que mais muda o resultado, e ele é uma linha só:
+
+```yaml
+english:
+  current_level: A2      # A1 A2 B1 B2 C1 C2
+```
+
+Depois de mudar, rode `adelaide-jobs score --rescore`.
+
+Duas coisas acontecem sozinhas. Primeiro, **vaga com atendimento ao
+cliente deixa de ser penalizada** — em A2 uma vaga de balcão perde quase
+todos os pontos de inglês; em B2 ela perde metade; em C1, quase nada.
+Segundo, **o peso da própria dimensão de inglês cai**, porque ela deixa
+de ser o gargalo, e os 14 pontos liberados são redistribuídos entre as
+outras sete dimensões, proporcionalmente.
+
+| Nível | Peso do inglês | O que muda na prática |
+|---|---|---|
+| A2 | 20 | Só back of house pontua bem |
+| B1 | 15 | Balcão de café começa a aparecer |
+| B2 | 10 | Atendimento vira opção normal |
+| C1 | 6 | O inglês quase não pesa mais |
+
+A soma continua exatamente 100 em qualquer nível, então as notas de
+meses diferentes seguem comparáveis — uma vaga que era A- em março e
+continua A- em julho é a mesma qualidade de vaga, não um artefato da
+mudança de peso.
+
+Exemplo real, a mesma vaga de atendimento:
+**A2 → 58 pontos · B1 → 64 · B2 → 67.** Ela sobe de "talvez" para "vale
+olhar" sem que nada no anúncio tenha mudado.
+
 ### `config/sources.yaml`
 
 - `enabled: true/false` liga e desliga cada fonte.
