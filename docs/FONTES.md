@@ -38,6 +38,7 @@ de te mostrar oportunidade que não existe.
 | **Adzuna** | API oficial, chave grátis | ~2.400/varredura | Não (agregador) |
 | **ATS diretos** | Workday e SmartRecruiters dos empregadores | dezenas | **Sim** |
 | **SA Health (PageUp)** | Portal de carreiras da saúde pública SA | **~625** | **Sim** |
+| **Alertas de e-mail** | SEEK, LinkedIn, Indeed e mais 4, via IMAP. Implementado, **falta você ligar** — 5 minutos, seção abaixo | 25–60/dia | Não, mas é o link canônico da plataforma, sem redirect |
 
 ### Adzuna — a base
 API documentada, chave gratuita, 250 requisições por dia. Varre oito
@@ -132,38 +133,94 @@ você não vai perder.
 
 ---
 
-## O canal que não é um coletor: alertas por e-mail
+## SEEK e LinkedIn — pela porta que eles deixam aberta
 
-O SEEK é o maior mercado de Adelaide e não pode ser raspado. Mas nada
-impede você de **assinar os alertas dele** e o programa ler a sua caixa
-de entrada — são e-mails que você pediu para receber.
+O SEEK é o maior mercado de Adelaide. O LinkedIn é o segundo. Nenhum
+dos dois tem API pública, os dois respondem 403 para quem não é
+navegador, e os dois proíbem acesso automatizado nos termos de uso.
 
-O código já está no repo (`email_alerts` em `config/sources.yaml`),
-desligado. Para ligar:
+Raspar qualquer um dos dois arrisca exatamente a conta que vai ser o
+seu canal principal de emprego na cidade onde você vai morar. A troca é
+ruim: ganha-se conveniência, perde-se acesso.
 
-1. Crie uma conta Gmail só para isso, por exemplo
+**Mas os dois mandam alerta por e-mail.** Você assina, eles entregam, e
+o e-mail é seu. Ler a própria caixa de entrada não viola termo nenhum —
+a plataforma está te entregando o dado de propósito, pelo canal que ela
+mesma construiu para isso. Mesma informação, um dia de atraso no pior
+caso.
+
+O coletor `email_alerts` faz isso e está implementado. Ele reconhece
+sete plataformas: **SEEK, LinkedIn, Indeed, Jora, Adzuna,
+iworkfor.sa.gov.au e Gumtree**.
+
+### Como ele funciona
+
+Ele **não parseia layout**. Layout de e-mail de marketing é gerado por
+ferramenta e muda sem aviso — classe CSS ali é areia. O que é estável é
+o padrão da URL da vaga, e é só isso que ele procura.
+
+Os links do e-mail vêm embrulhados em rastreador, mas em todos eles o
+ID da vaga viaja legível dentro da própria URL:
+
+    click.seek.com.au/f/a/…/h/https%3A%2F%2Fwww.seek.com.au%2Fjob%2F84213977
+                                                    ↓
+                            https://www.seek.com.au/job/84213977
+
+    linkedin.com/comm/jobs/view/4102938471?midToken=AQF&trk=eml-jymbii
+                                                    ↓
+                      https://www.linkedin.com/jobs/view/4102938471
+
+Então dá para reconstruir o link limpo sem seguir o redirect — que é
+lento, custa uma requisição por vaga e às vezes é bloqueado. O link que
+vai para o relatório é o definitivo, e continua funcionando depois que
+o rastreador do e-mail expira.
+
+Sai título e link; **não sai descrição**. Quando o mesmo anúncio também
+vier da Adzuna ou de um ATS, a deduplicação junta os dois e a descrição
+vem do outro lado — que é exatamente o efeito que se quer de ter várias
+fontes.
+
+### Ligar, uma vez só
+
+1. Crie uma conta Gmail só para isto, por exemplo
    `vagas.adelaide.2026@gmail.com`.
 2. Ative a verificação em duas etapas em
-   <https://myaccount.google.com/security>.
-3. Vá em <https://myaccount.google.com/apppasswords>, crie uma senha de
-   app chamada `coletor-vagas` e copie o código de 16 caracteres.
-4. Ponha no `.env`: `IMAP_USER` e `IMAP_PASSWORD` (a senha de app, não a
-   da conta).
-5. Assine os alertas diários de SEEK, Indeed AU, LinkedIn e
-   iworkfor.sa.gov.au usando esse e-mail.
+   <https://myaccount.google.com/security>. Sem isso o passo 3 não
+   aparece.
+3. Vá em <https://myaccount.google.com/apppasswords>, escreva
+   `coletor-vagas` e clique em Criar. Copie o código de 16 caracteres —
+   ele some quando você fecha a janela.
+4. No `.env` do projeto:
+
+       IMAP_USER=vagas.adelaide.2026@gmail.com
+       IMAP_PASSWORD=abcdefghijklmnop
+
+   A senha de app, sem espaços. **Nunca** a senha da conta.
+5. No Gmail, crie o rótulo `Vagas` e um filtro por remetente que jogue
+   os alertas nele, marcando "pular a caixa de entrada". Rótulo do
+   Gmail é pasta do IMAP: o coletor lê só aquela pasta.
+6. Assine os alertas **diários** de SEEK, Indeed AU, LinkedIn e
+   iworkfor.sa.gov.au usando esse endereço.
+7. Em `config/sources.yaml`, troque `enabled: false` para `true` no
+   bloco `email_alerts`.
 
 Volume esperado com 8 alertas diários: 80 a 200 cartões brutos, que
 depois da deduplicação viram **25 a 60 vagas únicas por dia**, das quais
 10 a 30 realmente novas.
 
-Dica de organização: crie um filtro no Gmail por remetente que jogue
-cada alerta num rótulo `Vagas/SEEK`, `Vagas/Indeed` etc. Rótulo do Gmail
-é pasta IMAP — o coletor lê só aquela pasta e ignora o resto da caixa.
+**Prefira muitos alertas estreitos a poucos amplos.** Cada e-mail mostra
+só os primeiros resultados; o resto você perde sem saber que existiu.
+Um alerta de "qualquer vaga em Adelaide" satura no primeiro dia.
 
-Prefira **muitos alertas estreitos a poucos amplos**: cada e-mail mostra
-só os primeiros N resultados, e o resto você perde sem saber.
+### E se você quiser o SEEK direto mesmo assim
 
----
+O código existe, funciona e está desligado: `collectors/seek_v5.py`, com
+o aviso no cabeçalho. A v5 é a API interna do site, sem autenticação,
+e aceita `where=All Adelaide SA`.
+
+Ligá-la é decisão sua e o interruptor está em `config/sources.yaml`. Se
+ligar: rate limit conservador, uma requisição por vez, e nunca do mesmo
+IP ou sessão em que você navega logado. Eu não ligo por você.
 
 ## Programador, games e design em Adelaide
 

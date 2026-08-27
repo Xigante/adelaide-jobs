@@ -184,13 +184,48 @@ seek_v5:
   min_seconds_between_calls: 8
 
 email_alerts:
-  # Fase 2. A via de menor risco: seus próprios dados, na sua caixa.
+  # ── O SEEK E O LINKEDIN, PELA PORTA QUE ELES DEIXAM ABERTA ───────
+  #
+  # Nenhum dos dois tem API pública e os dois proíbem acesso
+  # automatizado. Mas os dois mandam alerta por e-mail: você assina,
+  # eles entregam, e o e-mail é seu. Ler a própria caixa não viola
+  # termo nenhum — a plataforma está entregando o dado de propósito.
+  #
+  # Sai título e link. Não sai descrição. Quando o mesmo anúncio também
+  # vier da Adzuna ou de um ATS, a deduplicação junta os dois e a
+  # descrição vem do outro lado.
+  #
+  # PARA LIGAR (5 minutos, uma vez só):
+  #   1. Crie uma conta Gmail só para isto.
+  #   2. Ative a verificação em duas etapas:
+  #      https://myaccount.google.com/security
+  #   3. Crie uma senha de app em:
+  #      https://myaccount.google.com/apppasswords
+  #      Nome: coletor-vagas. Copie o código de 16 caracteres.
+  #   4. No .env:  IMAP_USER=seuemail@gmail.com
+  #                IMAP_PASSWORD=<a senha de app, NÃO a da conta>
+  #   5. No Gmail, crie o rótulo "Vagas" e um filtro por remetente que
+  #      jogue os alertas nele. Rótulo do Gmail é pasta do IMAP.
+  #   6. Assine os alertas DIÁRIOS de SEEK, Indeed AU, LinkedIn e
+  #      iworkfor.sa.gov.au usando esse endereço.
+  #   7. Troque a linha abaixo para `enabled: true`.
+  #
+  # Prefira muitos alertas estreitos a poucos amplos: cada e-mail mostra
+  # só os primeiros resultados e o resto some sem aviso.
   enabled: false
   legitimacy: own_data
-  senders:
-    - jobmail@seek.com.au
-    - noreply@seek.com.au
-    - alert@indeed.com
-    - noreply@au.indeed.com
-    - noreply@jora.com
+  # Pasta/rótulo a ler. Com uma pasta dedicada, não precisa filtrar por
+  # remetente — tudo que está lá é alerta.
+  folder: "Vagas"
+  # Quantos dias para trás. 3 cobre um fim de semana sem duplicar muito
+  # (a deduplicação resolve o resto).
   since_days: 3
+  # Deixe vazio para ler a pasta inteira. Preencha só se apontar o
+  # coletor para a INBOX, o que não é recomendado.
+  senders: []
+  #  - jobmail@seek.com.au
+  #  - jobs-noreply@linkedin.com
+  #  - jobalerts-noreply@linkedin.com
+  #  - alert@indeed.com
+  #  - noreply@au.indeed.com
+  #  - noreply@jora.com

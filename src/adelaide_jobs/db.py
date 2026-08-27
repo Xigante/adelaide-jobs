@@ -97,7 +97,7 @@ DEFAULT_DB = Path.home() / ".adelaide-jobs" / "jobs.db"
 ORDEM_DAS_FONTES = """
     CASE
         WHEN s.source LIKE 'ats:%%' THEN 0
-        WHEN s.source = 'email'     THEN 1
+        WHEN s.source LIKE 'email:%%' THEN 1
         WHEN s.source = 'adzuna'    THEN 2
         WHEN s.source = 'seek_v5'   THEN 3
         ELSE 4

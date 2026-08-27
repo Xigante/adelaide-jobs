@@ -79,9 +79,16 @@ score 95  (pesos w1)
 |---|---|---|
 | **Adzuna API** (`au`) | API oficial, chave gratuita | ligada |
 | **Workday** — Bunnings, Hungry Jack's, Flinders | endpoint público sem auth | ligada (requer `[ats]`) |
-| **SmartRecruiters** — McDonald's, Guzman y Gomez | API pública documentada | ligada (requer `[ats]`) |
-| **SEEK v5** | ⚠️ contra os Termos de Uso | **desligada** |
-| **Alertas de e-mail** (IMAP) | seus próprios dados | não implementada ainda |
+| **SmartRecruiters** — McDonald's, Guzman y Gomez, ALDI | API pública documentada | ligada (requer `[ats]`) |
+| **PageUp** — SA Health (~625 vagas) | robots.txt permite | ligada |
+| **Alertas de e-mail** — SEEK, LinkedIn, Indeed, Jora, Adzuna, iworkfor, Gumtree | seus próprios dados | implementada, **desligada até você configurar o IMAP** |
+| **SEEK v5** (direto) | ⚠️ contra os Termos de Uso | **desligada** |
+
+O SEEK e o LinkedIn não têm API pública e proíbem acesso automatizado. O
+caminho que este projeto usa para os dois é o **alerta de e-mail deles**,
+lido por IMAP na sua própria caixa: mesma informação, entregue pela
+plataforma, sem risco para a sua conta. Veja
+[docs/FONTES.md](docs/FONTES.md#seek-e-linkedin--pela-porta-que-eles-deixam-aberta).
 
 A camada de ATS usa [`ats-scrapers`](https://github.com/kalil0321/ats-scrapers) (MIT):
 70+ ATS numa interface só, com canário noturno que detecta endpoint quebrado
