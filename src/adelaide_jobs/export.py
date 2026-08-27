@@ -186,21 +186,27 @@ def to_html(db: Database, path: str | Path, threshold: int = 55, limit: int = 50
         km = d.get("distance_km")
         ing = d.get("eng_contact", "")
         classe = "tag" if ing in ("BOH_MINIMAL", "LOW") else "tag w"
-        rotulo = {"BOH_MINIMAL": "back of house", "LOW": "pouco contato",
-                  "MEDIUM": "atendimento", "HIGH": "muito inglês",
+        rotulo = {"BOH_MINIMAL": "sem atendimento", "LOW": "pouco contato",
+                  "MEDIUM": "atende cliente", "HIGH": "exige inglês bom",
                   "UNKNOWN": "não diz"}.get(ing, ing.lower())
         turno = {"OVERNIGHT": "noturno", "EVENING": "noite", "EARLY_MORNING": "madrugada",
                  "WEEKEND": "fim de semana", "DAYTIME": "diurno",
                  "ROTATING": "rotativo", "NOT_STATED": "—"}.get(d.get("shift_window", ""), "—")
+        fonte = (r["melhor_fonte"] if "melhor_fonte" in r.keys() else None) or r["source"] or ""
+        url = (r["melhor_url"] if "melhor_url" in r.keys() else None) or r["url"] or ""
+        fonte_txt = ("site da empresa" if fonte.startswith("ats:")
+                     else "alerta de e-mail" if fonte == "email"
+                     else "Adzuna" if fonte == "adzuna"
+                     else fonte)
         linhas.append(
             f'<tr><td class="sc">{r["score"]}</td>'
-            f'<td><a href="{e(r["url"] or "")}" target="_blank" rel="noopener">'
+            f'<td><a href="{e(url)}" target="_blank" rel="noopener">'
             f'{e(r["title"] or "")}</a></td>'
             f'<td class="emp">{e(r["employer"] or "—")}</td>'
             f'<td>{e(r["suburb"] or "—")}</td>'
             f'<td class="km">{f"{km:.1f}" if isinstance(km, (int, float)) else "?"}</td>'
             f'<td>{turno}</td><td><span class="{classe}">{e(rotulo)}</span></td>'
-            f'<td>{e(r["source"] or "")}</td></tr>'
+            f'<td>{e(fonte_txt)}</td></tr>'
         )
 
     s = db.stats()
@@ -210,10 +216,22 @@ def to_html(db: Database, path: str | Path, threshold: int = 55, limit: int = 50
                      ("bloqueadas", s["blocked"]), ("anúncios fantasma", s["ghosts"])]
     )
     rodape = (
-        f"Corte em {threshold} pontos — vagas abaixo disso ficaram de fora. "
-        "Para entender uma nota: <code>adelaide-jobs why &lt;id&gt;</code>.<br>"
-        "Dados de vagas fornecidos por Jobs by Adzuna e pelas páginas de "
-        "carreira dos próprios empregadores."
+        "<b>O que a coluna Inglês quer dizer</b><br>"
+        "<span class='tag'>sem atendimento</span> você trabalha longe do cliente — "
+        "cozinha, reposição de mercado à noite, limpeza, armazém. É onde inglês "
+        "básico não atrapalha.<br>"
+        "<span class='tag'>pouco contato</span> conversa curta e ocasional.<br>"
+        "<span class='tag w'>atende cliente</span> caixa, balcão, servir mesa.<br>"
+        "<span class='tag w'>exige inglês bom</span> o anúncio pede comunicação "
+        "fluente. Deixe para depois.<br><br>"
+        f"<b>Corte em {threshold} pontos</b> — o que ficou abaixo disso não aparece "
+        "aqui. Para entender uma nota: <code>adelaide-jobs why &lt;id&gt;</code>.<br><br>"
+        "<b>De onde vem o link.</b> Quando a mesma vaga aparece em mais de um "
+        "lugar, a coluna Fonte mostra o mais direto: o site da própria empresa "
+        "ganha do agregador, porque candidatar-se na origem preserva campos que "
+        "o intermediário às vezes perde.<br>"
+        "Dados de vagas fornecidos por Jobs by Adzuna e pelas páginas de carreira "
+        "dos próprios empregadores."
     )
     out.write_text(
         _PAGINA.format(

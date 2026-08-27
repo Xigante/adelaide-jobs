@@ -13,9 +13,24 @@ Cada dimensão devolve 0.0–1.0. O peso vem do profile.yaml.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .models import Dimensions
+
+
+# Nome interno da dimensão -> como ela se chama na tela, em português.
+ROTULOS = {
+    "experience_barrier":    "experiência exigida",
+    "english_load":          "quanto inglês precisa",
+    "visa_hours_fit":        "cabe no visto (48h/quinzena)",
+    "commute":               "distância da escola",
+    "shift_fit":             "horário do turno",
+    "certification_barrier": "certificados exigidos",
+    "employer_pattern":      "tipo de empregador",
+    "career_bridge":         "ponte para dados/admin",
+    "ghost_flag":            "anúncio repostado demais",
+    "multi_source_bonus":    "aparece em várias fontes",
+}
 
 
 @dataclass(slots=True)
@@ -27,14 +42,31 @@ class ScoreBreakdown:
     weighted: dict[str, float]
     penalties: dict[str, float]
     version: str
+    #: peso máximo de cada dimensão. Guardado, e não deduzido de
+    #: weighted/parts — quando a nota é 0 essa divisão não existe.
+    weights: dict[str, int] = field(default_factory=dict)
 
     def explain(self) -> str:
-        lines = [f"score {self.total}  (pesos {self.version})"]
+        """A conta aberta, em português.
+
+        Cada linha é: o que foi avaliado, a nota de 0 a 1 que a dimensão
+        tirou, quanto ela vale no máximo, e quantos pontos sobraram.
+        Sem isto o score seria opinião.
+        """
+        L = [
+            f"score {self.total} de 100      (versão dos pesos: {self.version})",
+            "",
+            f"  {'o que foi avaliado':<30}{'nota':>6}{'vale até':>10}{'pontos':>9}",
+            "  " + "\u2500" * 55,
+        ]
         for k, v in sorted(self.weighted.items(), key=lambda kv: -kv[1]):
-            lines.append(f"  {k:<24} {self.parts[k]:.2f} × peso = {v:5.1f}")
+            peso = self.weights.get(k, 0)
+            L.append(f"  {ROTULOS.get(k, k):<30}{self.parts[k]:>6.2f}{peso:>10}{v:>9.1f}")
         for k, v in self.penalties.items():
-            lines.append(f"  {k:<24} {'':>13} {-v:5.1f}")
-        return "\n".join(lines)
+            L.append(f"  {ROTULOS.get(k, k):<30}{'':>6}{'':>10}{-v:>9.1f}")
+        L.append("  " + "\u2500" * 55)
+        L.append(f"  {'TOTAL':<30}{'':>6}{'':>10}{self.total:>9}")
+        return "\n".join(L)
 
 
 # ── uma função por dimensão, cada uma devolvendo 0.0–1.0 ────────────
@@ -203,6 +235,7 @@ def score(
         total += 3.0
 
     return ScoreBreakdown(
+        weights=w,
         total=_round_half_up(total),
         parts=parts,
         weighted=weighted,

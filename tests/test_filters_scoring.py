@@ -127,5 +127,15 @@ def test_pm_class_kills_evening_shifts():
 
 
 def test_breakdown_explains_itself():
-    text = score(dims(exp_req="NONE_REQUIRED")).explain()
-    assert "experience_barrier" in text and "score" in text
+    """A explicação é para o humano ler, então sai em português.
+
+    Se um dia alguém traduzir de volta para o nome interno da dimensão,
+    este teste avisa.
+    """
+    b = score(dims(exp_req="NONE_REQUIRED"))
+    text = b.explain()
+    assert "experiência exigida" in text
+    assert "quanto inglês precisa" in text
+    assert "TOTAL" in text
+    assert str(b.total) in text
+    assert "experience_barrier" not in text, "nome interno vazou para a tela"

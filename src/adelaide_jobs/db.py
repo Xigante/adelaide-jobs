@@ -90,6 +90,20 @@ CREATE TABLE IF NOT EXISTS run_log (
 # no perfil do usuario, que nunca e sincronizado.
 DEFAULT_DB = Path.home() / ".adelaide-jobs" / "jobs.db"
 
+# Quando a mesma vaga aparece em várias fontes, é por esta ordem que se
+# escolhe onde clicar. A página do próprio empregador vem primeiro: o
+# agregador às vezes perde campo, corta a descrição, ou manda para um
+# formulário degradado — e candidatar-se na origem é sempre melhor.
+ORDEM_DAS_FONTES = """
+    CASE
+        WHEN s.source LIKE 'ats:%%' THEN 0
+        WHEN s.source = 'email'     THEN 1
+        WHEN s.source = 'adzuna'    THEN 2
+        WHEN s.source = 'seek_v5'   THEN 3
+        ELSE 4
+    END
+"""
+
 
 class StorageUnavailable(RuntimeError):
     """O SQLite não consegue escrever nesse caminho.
@@ -303,9 +317,14 @@ class Database:
     def queue(self, threshold: int = 55, limit: int = 200) -> list[sqlite3.Row]:
         """A fila: o que vale a pena olhar, melhor primeiro."""
         return self.conn.execute(
-            """SELECT * FROM job_cluster
-               WHERE verdict='SCORED' AND score >= ? AND applied_at IS NULL
-               ORDER BY score DESC, last_seen DESC LIMIT ?""",
+            f"""SELECT c.*,
+                   (SELECT s.url FROM job_sighting s WHERE s.cluster_id = c.cluster_id
+                    ORDER BY {ORDEM_DAS_FONTES} LIMIT 1) AS melhor_url,
+                   (SELECT s.source FROM job_sighting s WHERE s.cluster_id = c.cluster_id
+                    ORDER BY {ORDEM_DAS_FONTES} LIMIT 1) AS melhor_fonte
+               FROM job_cluster c
+               WHERE c.verdict='SCORED' AND c.score >= ? AND c.applied_at IS NULL
+               ORDER BY c.score DESC, c.last_seen DESC LIMIT ?""",
             (threshold, limit),
         ).fetchall()
 
