@@ -83,3 +83,58 @@ def test_csv_export(cfg, db, adzuna_payload, tmp_path):
     content = path.read_text(encoding="utf-8-sig")
     assert "score" in content.splitlines()[0]
     assert len(content.splitlines()) >= 2
+
+
+# ── O bug de 30/08/2026 ─────────────────────────────────────────────
+# `score_pending` chamava `db.unscored()` uma vez só, e `unscored`
+# devolve no máximo 500 linhas. Com 7 vagas no banco nenhum teste
+# pegava. Na primeira coleta real vieram 6.970 vagas, 5.526 clusters, e
+# 5.026 ficaram sem nota — fora do relatório, sem erro nenhum.
+#
+# Este teste enche o banco com MAIS que um lote de propósito.
+
+def test_pontua_alem_de_um_lote(tmp_path):
+    """Com 1.200 vagas, as 1.200 têm que sair com nota — não 500."""
+    from adelaide_jobs import config as config_mod
+    from adelaide_jobs.db import Database
+    from adelaide_jobs.models import Job
+    from adelaide_jobs.pipeline import Pipeline
+
+    cfg = config_mod.load()
+    with Database(tmp_path / "b.db") as db:
+        vagas = [
+            Job(source="adzuna", source_id=f"v{i}",
+                title=f"Kitchen Hand {i}", url=f"https://x/{i}",
+                employer=f"Empregador {i}", description="Casual kitchen work.",
+                suburb="Adelaide", state="SA")
+            for i in range(1200)
+        ]
+        Pipeline(cfg, db).run_offline(vagas) if hasattr(Pipeline, "run_offline") \
+            else Pipeline(cfg, db).ingest(vagas)
+        rel = Pipeline(cfg, db).score_pending()
+
+        sem_nota = db.conn.execute(
+            "SELECT COUNT(*) c FROM job_cluster WHERE verdict IS NULL"
+        ).fetchone()["c"]
+        assert sem_nota == 0, f"{sem_nota} vagas ficaram sem nota"
+        assert rel.scored + rel.blocked == 1200
+
+
+def test_unscored_devolve_um_lote_nao_tudo(tmp_path):
+    """O teto de `unscored` é o tamanho do lote, e continua existindo —
+    é ele que impede de carregar seis mil linhas de uma vez."""
+    from adelaide_jobs import config as config_mod
+    from adelaide_jobs.db import Database
+    from adelaide_jobs.models import Job
+    from adelaide_jobs.pipeline import Pipeline
+
+    cfg = config_mod.load()
+    with Database(tmp_path / "b.db") as db:
+        Pipeline(cfg, db).ingest([
+            Job(source="adzuna", source_id=f"v{i}", title=f"Cleaner {i}",
+                url=f"https://x/{i}", employer=f"E{i}", description="Casual.",
+                suburb="Adelaide", state="SA")
+            for i in range(700)
+        ])
+        assert len(db.unscored()) == 500
+        assert len(db.unscored(lote=50)) == 50

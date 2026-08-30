@@ -11,6 +11,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 from . import filters
 from .config import Config
@@ -165,49 +166,69 @@ class Pipeline:
         return report
 
     def score_pending(self, report: RunReport | None = None) -> RunReport:
+        """Pontua TODOS os clusters sem nota, em lotes.
+
+        BUG de 30/08/2026, que custou 90% de uma coleta: aqui havia um
+        `rows = self.db.unscored()` sozinho, sem laço. E `unscored`
+        devolve no máximo 500 por chamada. Com 7 vagas no banco ninguém
+        percebia. Na primeira coleta de verdade vieram 6.970 vagas, que
+        viraram 5.526 clusters — e 5.026 ficaram sem nota, fora do
+        relatório, em silêncio.
+
+        O lote continua existindo, e deve: é o que impede de carregar
+        seis mil linhas na memória de uma vez. O que faltava era repetir
+        até vir vazio.
+        """
         report = report or RunReport()
-        rows = self.db.unscored()
-
-        for row in rows:
-            sight = self.db.conn.execute(
-                "SELECT description FROM job_sighting WHERE cluster_id=? "
-                "ORDER BY length(description) DESC LIMIT 1",
-                (row["cluster_id"],),
-            ).fetchone()
-            job = Job(
-                source=row["source"] or "",
-                source_id=row["cluster_id"],
-                title=row["title"] or "",
-                url=row["url"] or "",
-                employer=row["employer"],
-                description=(sight["description"] if sight else "") or "",
-                suburb=row["suburb"],
-                postcode=row["postcode"],
-            )
-            dims = self.extractor.extract(job)
-            ko = filters.check(job, dims, self.cfg.max_commute_km)
-
-            with self.db.tx():
-                if ko:
-                    report.blocked += 1
-                    report.knockouts[ko.code] = report.knockouts.get(ko.code, 0) + 1
-                    self.db.save_score(row["cluster_id"], 0, "BLOCKED", ko.reason,
-                                       dims, self.cfg.score_version)
-                else:
-                    breakdown = compute_score(
-                        dims,
-                        self.cfg.weights,
-                        class_pattern=self.cfg.class_pattern,
-                        english_level=self.cfg.english_level,
-                        ghost=bool(row["ghost_flag"]),
-                        ghost_penalty=self.cfg.ghost_penalty,
-                        multi_source=row["source_count"] or 1,
-                        version=self.cfg.score_version,
-                    )
-                    report.scored += 1
-                    self.db.save_score(row["cluster_id"], breakdown.total, "SCORED",
-                                       None, dims, self.cfg.score_version)
+        while True:
+            rows = self.db.unscored()
+            if not rows:
+                break
+            for row in rows:
+                self._score_row(row, report)
+            log.info("pontuadas %d (%d bloqueadas)", report.scored, report.blocked)
         return report
+
+    def _score_row(self, row: Any, report: RunReport) -> None:
+        """Extrai, aplica knockout e grava a nota de um cluster."""
+        sight = self.db.conn.execute(
+            "SELECT description FROM job_sighting WHERE cluster_id=? "
+            "ORDER BY length(description) DESC LIMIT 1",
+            (row["cluster_id"],),
+        ).fetchone()
+        job = Job(
+            source=row["source"] or "",
+            source_id=row["cluster_id"],
+            title=row["title"] or "",
+            url=row["url"] or "",
+            employer=row["employer"],
+            description=(sight["description"] if sight else "") or "",
+            suburb=row["suburb"],
+            postcode=row["postcode"],
+        )
+        dims = self.extractor.extract(job)
+        ko = filters.check(job, dims, self.cfg.max_commute_km)
+
+        with self.db.tx():
+            if ko:
+                report.blocked += 1
+                report.knockouts[ko.code] = report.knockouts.get(ko.code, 0) + 1
+                self.db.save_score(row["cluster_id"], 0, "BLOCKED", ko.reason,
+                                   dims, self.cfg.score_version)
+            else:
+                breakdown = compute_score(
+                    dims,
+                    self.cfg.weights,
+                    class_pattern=self.cfg.class_pattern,
+                    english_level=self.cfg.english_level,
+                    ghost=bool(row["ghost_flag"]),
+                    ghost_penalty=self.cfg.ghost_penalty,
+                    multi_source=row["source_count"] or 1,
+                    version=self.cfg.score_version,
+                )
+                report.scored += 1
+                self.db.save_score(row["cluster_id"], breakdown.total, "SCORED",
+                                   None, dims, self.cfg.score_version)
 
     def run(self, sources: list[str] | None = None) -> RunReport:
         from .collectors import registry

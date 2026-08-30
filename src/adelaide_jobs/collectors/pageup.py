@@ -28,6 +28,7 @@ devolve zero em silêncio — ele reclama, com o código HTTP.
 from __future__ import annotations
 
 import re
+import time
 from datetime import date, datetime
 from typing import Any
 
@@ -89,7 +90,7 @@ class PageUpCollector(BaseCollector):
 
         with httpx.Client(
             headers={"User-Agent": USER_AGENT, "Accept": "text/html"},
-            timeout=25.0, follow_redirects=True,
+            timeout=45.0, follow_redirects=True,
         ) as client:
             for alvo in alvos:
                 rotulo = alvo.get("name", "?")
@@ -98,13 +99,34 @@ class PageUpCollector(BaseCollector):
                     self.note_error(f"{rotulo}: sem url")
                     continue
                 vistos: set[str] = set()
+                falhas = 0
                 for pagina in range(1, max_pages + 1):
-                    self.throttle()
-                    try:
-                        r = client.get(base, params={"page": pagina})
-                    except Exception as exc:  # noqa: BLE001
-                        self.note_error(f"{rotulo} p{pagina}: {type(exc).__name__}: {exc}")
-                        break
+                    # Uma página lenta não pode custar a fonte inteira.
+                    # Na coleta de 30/08/2026 o SA Health deu ReadTimeout
+                    # na página 5 e o coletor abandonou as outras 21 —
+                    # 46 vagas em vez de 625. Agora tenta de novo, e só
+                    # desiste depois de três falhas seguidas.
+                    r = None
+                    for tentativa in range(3):
+                        self.throttle()
+                        try:
+                            r = client.get(base, params={"page": pagina})
+                            break
+                        except Exception as exc:  # noqa: BLE001
+                            if tentativa == 2:
+                                self.note_error(
+                                    f"{rotulo} p{pagina}: {type(exc).__name__}: {exc} "
+                                    f"(3 tentativas)"
+                                )
+                            else:
+                                time.sleep(4 * (tentativa + 1))
+                    if r is None:
+                        falhas += 1
+                        if falhas >= 3:
+                            self.note_error(f"{rotulo}: 3 páginas seguidas falharam, parando")
+                            break
+                        continue
+                    falhas = 0
                     linhas = self.parse(r.text, base, rotulo)
                     if not linhas:
                         if pagina == 1:

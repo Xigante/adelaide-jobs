@@ -348,9 +348,15 @@ class Database:
             (limit,),
         ).fetchall()
 
-    def unscored(self, limit: int = 500) -> list[sqlite3.Row]:
+    def unscored(self, lote: int = 500) -> list[sqlite3.Row]:
+        """Um LOTE de clusters sem nota — não todos.
+
+        Quem chama tem que repetir até vir vazio. `Pipeline.score_pending`
+        faz isso. O lote existe para a memória não explodir com 6 mil
+        vagas de uma vez; não é um limite de quantas se pontua.
+        """
         return self.conn.execute(
-            "SELECT * FROM job_cluster WHERE verdict IS NULL LIMIT ?", (limit,)
+            "SELECT * FROM job_cluster WHERE verdict IS NULL LIMIT ?", (lote,)
         ).fetchall()
 
     def stats(self) -> dict[str, Any]:
