@@ -23,7 +23,8 @@ adzuna:
     healthcare-nursing-jobs: 10     # 3.141 vagas · pega 500
     social-work-jobs: 7             #   484       · pega 350
     # ── Hospitalidade: restaurante, café e hotel, tudo junto ───────
-    hospitality-catering-jobs: 10   # 1.262       · pega 500
+    hospitality-catering-jobs: 14   # 1.262       · pega 700 — é o alvo
+                                    #   principal, então vai mais fundo
     # ── Escritório (objetivo secundário) ───────────────────────────
     admin-jobs: 8                   # 1.094       · pega 400
     accounting-finance-jobs: 7      #   711       · pega 350 — é aqui
