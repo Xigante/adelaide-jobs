@@ -124,30 +124,82 @@ career_keywords:
   - figma
   - admin assistant
   - data entry
-  # ── A profissão dele. Sem isto, "Recruitment Coordinator" pontuava
-  #    como vaga administrativa qualquer, quando na verdade é a única
-  #    categoria onde ele chega com 3 anos de experiência de verdade.
-  #    Adelaide tem 340 vagas de hr-jobs e 6 boutiques de executive
-  #    search a menos de um quilômetro da escola.
-  - recruitment
-  - recruiter
-  - recruitment consultant
-  - recruitment coordinator
-  - recruitment administrator
-  - talent acquisition
-  - talent partner
-  - resourcer
-  - candidate manager
-  - executive search
-  - search consultant
+  # ── A profissão dele: DADOS, não recrutamento ─────────────────
+  #    Ele trabalha com dados e relatório numa firma de executive
+  #    search — o cargo é analítico, não é recrutador. Por isso aqui
+  #    entram ferramentas e funções de análise, e NÃO "recruitment
+  #    consultant" nem "talent acquisition", que são o outro lado da
+  #    mesa e não descrevem o que ele faz.
+  #
+  #    Medido na Adzuna em 30/08/2026, raio de 25 km de Adelaide:
+  #      "power bi"          119 vagas   ← o termo mais produtivo
+  #      "business analyst"   77
+  #      "data analyst"       34
+  #      "reporting analyst"  13
+  #    Ou seja: buscar pela FERRAMENTA acha três vezes mais que buscar
+  #    pelo nome do cargo. Por isso a lista pesa em ferramenta.
+  - power bi
+  - powerbi
+  - power query
+  - dax
+  - tableau
+  - looker
+  - looker studio
+  - qlik
+  - advanced excel
+  - excel
+  - sql
+  - python
+  - data analyst
+  - data analytics
+  - analytics
+  - business intelligence
+  - bi developer
+  - bi analyst
+  - business analyst
+  - reporting analyst
+  - reporting officer
+  - insights analyst
+  - data engineer
+  - data quality
+  - data governance
+  - master data
+  - data warehouse
+  - etl
+  - dashboard
+  - dashboards
+  - reporting
+  - mis
+  - crm
+  - salesforce
+  - power automate
+  - automation
+  - rpa
+  - process improvement
+  - data entry
+  - admin assistant
+  - administration officer
+  # ── O nicho onde as duas coisas se encontram ──────────────────
+  #    Research e market mapping numa boutique de search é trabalho
+  #    de dados, e é onde os 3 anos dele contam de verdade. Adelaide
+  #    tem 6 dessas firmas, todas pequenas e sem estrutura própria
+  #    de pesquisa.
   - research analyst
   - market mapping
-  - talent sourcing
-  - sourcing specialist
-  - people and culture
-  - hr assistant
-  - hr coordinator
-  - hr administrator
+  - market intelligence
+  # ── Formação: games e design ──────────────────────────────────
+  - game designer
+  - game analyst
+  - game developer
+  - liveops
+  - qa tester
+  - unity
+  - unreal
+  - ux designer
+  - ui designer
+  - product designer
+  - figma
+  - generative ai
 
 # Termos que marcam a vaga como back-of-house (inglês baixo funciona).
 boh_keywords:

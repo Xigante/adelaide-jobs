@@ -26,6 +26,11 @@ adzuna:
     hospitality-catering-jobs: 10   # 1.262       · pega 500
     # ── Escritório (objetivo secundário) ───────────────────────────
     admin-jobs: 8                   # 1.094       · pega 400
+    accounting-finance-jobs: 7      #   711       · pega 350 — é aqui
+                                    #   que mora "Reporting Officer",
+                                    #   "Finance Analyst" e boa parte
+                                    #   do trabalho de relatório
+    consultancy-jobs: 4             #   205       · pega inteira
     customer-services-jobs: 8       #   401       · pega a categoria inteira
     hr-jobs: 7                      #   340       · pega inteira — é o
                                     #   segmento da Flow: recrutamento
@@ -115,11 +120,15 @@ adzuna:
     - data analyst
     - game developer
     - ux designer
-    # ── a profissão dele: recrutamento e executive search ──────────
-    - recruitment coordinator
-    - talent acquisition
-    - resourcer
-    - executive search
+    # ── a profissão dele: DADOS ────────────────────────────────────
+    # Medido em 30/08/2026: "power bi" devolve 119 em Adelaide,
+    # "data analyst" só 34. Buscar pela ferramenta rende mais que
+    # pelo nome do cargo.
+    - business analyst
+    - reporting analyst
+    - business intelligence
+    - dashboard
+    - salesforce
   results_per_page: 50
   max_pages: 2
   # Limites publicados nos termos da Adzuna: 25/min, 250/dia, 2500/mês.
