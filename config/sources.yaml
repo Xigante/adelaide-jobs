@@ -11,24 +11,40 @@ adzuna:
   distance_km: 25
   # Termos de busca. Um request por termo.
   # ── VARREDURA POR CATEGORIA (é daqui que vem o volume) ───────────
-  # Traz o setor inteiro num raio de 25 km, não só o que casa uma frase.
-  # Contagem medida na API em 27/08/2026:
+  # Profundidade por categoria, não uma só para todas. O número ao lado
+  # de cada uma é quantas vagas ela REALMENTE tem em Adelaide num raio
+  # de 25 km, medido na API em 30/08/2026 — não é estimativa.
+  #
+  # 50 vagas por página. `páginas × 50` é o teto do que se coleta.
+  # Onde o total é menor que isso, a varredura pega a categoria inteira
+  # e para sozinha.
   categories:
-    - hospitality-catering-jobs     # 1.262 vagas
-    - admin-jobs                    # 1.094  (objetivo secundário)
-    - logistics-warehouse-jobs      #   958
-    - retail-jobs                   #   905
-    - part-time-jobs                #   275
-    - domestic-help-cleaning-jobs   #   226
-    # ── formação dele: dados, games, design ──────────────────────
-    # Peso pequeno no score (career_bridge = 4), mas o radar precisa
-    # ver. Adelaide tem polo de games — Mighty Kingdom, Sony
-    # PlayStation Adelaide, Tantalus South, Monkeystack.
-    - it-jobs
-    - creative-design-jobs
-  # 50 por página × 6 páginas × 8 categorias = 48 requisições, até 2.400
-  # vagas. O limite da Adzuna é 250 requisições/dia, então há folga.
-  category_max_pages: 6
+    # ── Saúde e aged care: a maior de todas, e ninguém olhava ──────
+    healthcare-nursing-jobs: 10     # 3.141 vagas · pega 500
+    social-work-jobs: 7             #   484       · pega 350
+    # ── Hospitalidade: restaurante, café e hotel, tudo junto ───────
+    hospitality-catering-jobs: 10   # 1.262       · pega 500
+    # ── Escritório (objetivo secundário) ───────────────────────────
+    admin-jobs: 8                   # 1.094       · pega 400
+    customer-services-jobs: 8       #   401       · pega a categoria inteira
+    hr-jobs: 7                      #   340       · pega inteira — é o
+                                    #   segmento da Flow: recrutamento
+                                    #   e executive search em Adelaide
+    # ── Varejo e logística ─────────────────────────────────────────
+    retail-jobs: 8                  #   905       · pega 400
+    logistics-warehouse-jobs: 8     #   958       · pega 400
+    # ── Formação dele: dados, games, design ────────────────────────
+    it-jobs: 7                      #   815       · pega 350
+    creative-design-jobs: 2         #    70       · pega inteira
+    # ── Transversais ───────────────────────────────────────────────
+    part-time-jobs: 6               #   275       · pega inteira
+    domestic-help-cleaning-jobs: 5  #   226       · pega inteira
+  # Categorias medidas e DESCARTADAS: other-general-jobs tem 20 vagas em
+  # Adelaide. Não vale a requisição.
+  #
+  # Soma: 86 requisições de categoria. Com os 41 termos × 2 páginas = 82,
+  # dá 168 das 250 diárias. Sobra folga para uma segunda rodada parcial.
+  daily_request_budget: 250
 
   # ── BUSCA POR PALAVRA ────────────────────────────────────────────
   # Isto aqui não é "complemento". Metade do mercado australiano só é
@@ -99,6 +115,11 @@ adzuna:
     - data analyst
     - game developer
     - ux designer
+    # ── a profissão dele: recrutamento e executive search ──────────
+    - recruitment coordinator
+    - talent acquisition
+    - resourcer
+    - executive search
   results_per_page: 50
   max_pages: 2
   # Limites publicados nos termos da Adzuna: 25/min, 250/dia, 2500/mês.

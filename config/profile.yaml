@@ -124,6 +124,30 @@ career_keywords:
   - figma
   - admin assistant
   - data entry
+  # ── A profissão dele. Sem isto, "Recruitment Coordinator" pontuava
+  #    como vaga administrativa qualquer, quando na verdade é a única
+  #    categoria onde ele chega com 3 anos de experiência de verdade.
+  #    Adelaide tem 340 vagas de hr-jobs e 6 boutiques de executive
+  #    search a menos de um quilômetro da escola.
+  - recruitment
+  - recruiter
+  - recruitment consultant
+  - recruitment coordinator
+  - recruitment administrator
+  - talent acquisition
+  - talent partner
+  - resourcer
+  - candidate manager
+  - executive search
+  - search consultant
+  - research analyst
+  - market mapping
+  - talent sourcing
+  - sourcing specialist
+  - people and culture
+  - hr assistant
+  - hr coordinator
+  - hr administrator
 
 # Termos que marcam a vaga como back-of-house (inglês baixo funciona).
 boh_keywords:

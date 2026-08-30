@@ -51,20 +51,44 @@ class AdzunaCollector(BaseCollector):
         per_page = int(self.config.get("results_per_page", 50))
         max_pages = int(self.config.get("max_pages", 2))
         queries: list[str] = self.config.get("queries") or []
-        categories: list[str] = self.config.get("categories") or []
+        # `categories` aceita duas formas. Lista de tags usa a
+        # profundidade única de `category_max_pages`; mapa {tag: páginas}
+        # dá profundidade por categoria — que é o que se quer, porque
+        # healthcare tem 3.141 vagas em Adelaide e design tem 70. Varrer
+        # as duas com a mesma profundidade gasta requisição à toa numa e
+        # deixa a outra pela metade.
+        categorias_cfg = self.config.get("categories") or []
         cat_pages = int(self.config.get("category_max_pages", max_pages))
+        if isinstance(categorias_cfg, dict):
+            categories = [(str(tag), int(n)) for tag, n in categorias_cfg.items()]
+        else:
+            categories = [(str(tag), cat_pages) for tag in categorias_cfg]
 
         # Uma "varredura" é (rótulo, parâmetros extras, quantas páginas).
         # Categoria devolve o setor inteiro perto de Adelaide; palavra-chave
         # só o que casa a frase. A diferença é grande: "kitchen hand" traz
         # 53, a categoria hospitality traz 1.262. Categoria vem primeiro.
         varreduras: list[tuple[str, dict[str, Any], int]] = []
-        for cat in categories:
-            varreduras.append((f"cat:{cat}", {"category": cat}, cat_pages))
+        for cat, paginas in categories:
+            varreduras.append((f"cat:{cat}", {"category": cat}, paginas))
         for query in queries:
             varreduras.append((query, {"what": query}, max_pages))
         if not varreduras:
             varreduras = [("", {}, max_pages)]
+
+        # O limite da Adzuna é 250 requisições por dia. Estourar não dá
+        # erro bonito: dá 429 no meio da varredura, e você fica com meia
+        # coleta sem saber onde parou. Melhor avisar antes de começar.
+        orcamento = int(self.config.get("daily_request_budget", 250))
+        planejadas = sum(p for _, _, p in varreduras)
+        log.info("[adzuna] %d requisições planejadas de %d/dia (%d categorias, "
+                 "%d termos)", planejadas, orcamento, len(categories), len(queries))
+        if planejadas > orcamento:
+            self.note_error(
+                f"o plano pede {planejadas} requisições e o limite diário é "
+                f"{orcamento}. Reduza páginas em config/sources.yaml, ou a "
+                f"varredura vai parar no meio com 429."
+            )
 
         jobs: list[Job] = []
         with httpx.Client(timeout=30.0, headers={"User-Agent": USER_AGENT}) as client:
