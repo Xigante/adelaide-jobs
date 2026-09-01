@@ -23,7 +23,7 @@ a v1 é regex e aritmética, sem LLM.
 
 ### Windows, jeito curto
 
-Clique duplo em **`RODAR.bat`** (na pasta acima desta). Ele acha o Python,
+Clique duplo em **`INSTALAR.bat`** (na raiz do projeto). Ele acha o Python,
 cria o ambiente virtual, instala tudo, roda os testes, pergunta as chaves
 e escreve o `.env`.
 

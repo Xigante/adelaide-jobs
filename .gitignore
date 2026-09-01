@@ -16,6 +16,9 @@ credentials/
 service-account*.json
 
 # dados locais
+# Os .bak do material sao 1 MB cada e ja tem 13. Ficam no disco como
+# rede de seguranca, mas nao no historico do git.
+material/*.bak*
 data/
 *.db
 *.sqlite3
