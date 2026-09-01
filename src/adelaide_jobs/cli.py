@@ -31,9 +31,51 @@ def _setup_logging(verbose: bool) -> None:
     )
 
 
+def _banco_integro(caminho: str | Path) -> bool:
+    """Confere o banco antes de qualquer comando que escreva nele.
+
+    Em 01/09/2026 uma página interna da árvore de `job_cluster` ficou com
+    os rowids fora de ordem. O SQLite acha uma linha por busca binária
+    dentro da página; com a ordem errada ele desce na sub-árvore errada e
+    o banco passa a mentir — `count(*)` dizia 5.278, um `SELECT *`
+    devolvia 5.032, e o índice conhecia 5.526. A coleta rodou seis
+    minutos, gastou cota da Adzuna, e só morreu no primeiro UPDATE, com
+    um traceback de SQLite que não diz o que fazer.
+
+    Custa 0,02 s num banco de 10 MB. Vale sempre a pena.
+    """
+    import sqlite3
+    p = Path(caminho)
+    if not p.exists():
+        return True                       # ainda não existe: normal
+    try:
+        con = sqlite3.connect(f"file:{p}?mode=ro", uri=True)
+        try:
+            problemas = [m for (m,) in con.execute("PRAGMA integrity_check(1)")]
+        finally:
+            con.close()
+    except sqlite3.DatabaseError as exc:
+        problemas = [str(exc)]
+    if problemas == ["ok"]:
+        return True
+    print()
+    print("  O BANCO DE VAGAS ESTÁ CORROMPIDO. Parei antes de gastar cota.")
+    print()
+    for linha in str(problemas[0]).splitlines()[:3]:
+        print(f"    {linha.strip()}")
+    print()
+    print("  O conserto: rode o REPARAR-BANCO.bat, na pasta australia.")
+    print("  Ele reconstrói o banco com tudo que ainda dá para ler e")
+    print("  guarda o antigo ao lado, com a data no nome. Depois é só")
+    print("  rodar o ATUALIZAR-VAGAS.bat de novo.")
+    print()
+    return False
+
+
 def cmd_doctor(args: argparse.Namespace) -> int:
     from . import doctor
     config_mod.load()          # carrega o .env
+    banco_ok = _banco_integro(args.db)
     checks, all_ok = doctor.run(skip_network=args.offline)
     for c in checks:
         print(c.line())
@@ -47,13 +89,15 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         else:
             print("A v5 do SEEK não respondeu. Os alertas de e-mail continuam")
             print("sendo o caminho — e são o de menor risco de qualquer forma.")
-    return 0 if all_ok else 1
+    return 0 if (all_ok and banco_ok) else 1
 
 
 def cmd_collect(args: argparse.Namespace) -> int:
     from . import export
     from .pipeline import Pipeline
     cfg = config_mod.load()
+    if not _banco_integro(args.db):
+        return 1
     with Database(args.db) as db:
         report = Pipeline(cfg, db).run(sources=args.source or None)
         print(report.summary())
