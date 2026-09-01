@@ -13,6 +13,14 @@ fontes  →  SQLite (fonte da verdade)  →  triagem  →  score  →  CSV / She
 
 ---
 
+> **Num computador novo?** Leia [COMECAR-AQUI.md](COMECAR-AQUI.md) — são
+> três passos e um duplo clique em `INSTALAR.bat`.
+>
+> **É uma IA?** [CLAUDE.md](CLAUDE.md) se você vai mexer no código,
+> [PROMPT-PARA-IA.md](PROMPT-PARA-IA.md) se vai analisar o relatório.
+
+---
+
 ## Em 5 minutos
 
 ```bash
