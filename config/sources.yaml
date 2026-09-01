@@ -216,20 +216,42 @@ email_alerts:
   # vier da Adzuna ou de um ATS, a deduplicação junta os dois e a
   # descrição vem do outro lado.
   #
-  # PARA LIGAR (5 minutos, uma vez só):
-  #   1. Crie uma conta Gmail só para isto.
-  #   2. Ative a verificação em duas etapas:
+  # PARA LIGAR — a ordem importa:
+  #
+  #   1. Crie uma conta Gmail SÓ para isto. Com uma conta dedicada a
+  #      caixa de entrada inteira já é a pasta de alertas: não precisa
+  #      de rótulo nem de filtro, e a senha de app não dá acesso a
+  #      nenhum e-mail pessoal seu.
+  #
+  #   2. Assine os alertas DIÁRIOS com esse endereço. Eles só chegam no
+  #      dia seguinte, por isso este passo vem antes:
+  #        SEEK       seek.com.au → busca → "Save search" → diário
+  #        LinkedIn   linkedin.com/jobs → busca → sino "Job alert"
+  #        Indeed AU  au.indeed.com → busca → "Receive job alerts"
+  #        Jora       au.jora.com → busca → "Email me jobs"
+  #        iworkfor   iworkfor.sa.gov.au → "Job Alerts" (governo de SA,
+  #                   ~450 vagas no metro — a maior fonte concentrada)
+  #        Gumtree    gumtree.com.au/jobs → "Save search"
+  #      Prefira muitos alertas estreitos a poucos amplos: cada e-mail
+  #      mostra só os primeiros resultados e o resto some sem aviso.
+  #
+  #   3. Na conta nova, ligue a verificação em duas etapas:
   #      https://myaccount.google.com/security
-  #   3. Crie uma senha de app em:
+  #      Sem isso o Google nem deixa criar senha de app.
+  #
+  #   4. Crie a senha de app em:
   #      https://myaccount.google.com/apppasswords
   #      Nome: coletor-vagas. Copie o código de 16 caracteres.
-  #   4. No .env:  IMAP_USER=seuemail@gmail.com
+  #
+  #   5. No .env:  IMAP_USER=aconta-nova@gmail.com
   #                IMAP_PASSWORD=<a senha de app, NÃO a da conta>
-  #   5. No Gmail, crie o rótulo "Vagas" e um filtro por remetente que
-  #      jogue os alertas nele. Rótulo do Gmail é pasta do IMAP.
-  #   6. Assine os alertas DIÁRIOS de SEEK, Indeed AU, LinkedIn e
-  #      iworkfor.sa.gov.au usando esse endereço.
-  #   7. Troque a linha abaixo para `enabled: true`.
+  #                IMAP_FOLDER=INBOX
+  #
+  #   6. Rode ferramentas\TESTAR-EMAIL.bat. Ele conecta, mostra o que
+  #      achou e não gasta cota de API nenhuma. Só continue se ele
+  #      terminar dizendo que extraiu vagas.
+  #
+  #   7. Aí sim, troque a linha abaixo para `enabled: true`.
   #
   # Prefira muitos alertas estreitos a poucos amplos: cada e-mail mostra
   # só os primeiros resultados e o resto some sem aviso.
