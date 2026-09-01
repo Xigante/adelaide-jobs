@@ -369,6 +369,15 @@ Daí em diante o play é esse ícone. Se o Windows da empresa bloquear a criaç�
 automática, o próprio arquivo explica o caminho manual: botão direito em
 <code>ATUALIZAR-VAGAS.bat</code> → Enviar para → Área de trabalho (criar atalho).</p>
 
+<p class="nota"><b>O que a coleta gera, além do relatório.</b> Desde 01/09
+o <code>export</code> escreve também <code>exports/empregadores.csv</code> e
+<code>exports/empregadores.json</code>: o cadastro de todas as empresas que já
+anunciaram vaga — o que cada uma pede, em que bairro, quando apareceu a
+primeira e a última, e a melhor nota que uma vaga dela tirou. A tabela
+<code>employer</code> no banco <b>nunca perde uma linha</b>: o anúncio sai do ar,
+a empresa fica. É desse JSON que a aba <b>Empresas</b> do material se alimenta —
+rode o <code>aba-empresas.py</code> depois da coleta para atualizá-la.</p>
+
 <p>Se preferir digitar os comandos, abra o terminal na pasta do projeto:</p>
 <pre><code>"%USERPROFILE%\.venvs\adelaide-jobs\Scripts\adelaide-jobs.exe" doctor
 "%USERPROFILE%\.venvs\adelaide-jobs\Scripts\adelaide-jobs.exe" collect
