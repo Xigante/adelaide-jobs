@@ -1,0 +1,259 @@
+# ════════════════════════════════════════════════════════════════════
+#  Perfil — fonte única da verdade. Tudo no pipeline deriva daqui.
+#  Mudou de situação? Mude aqui, não no código.
+# ════════════════════════════════════════════════════════════════════
+profile_version: "2026.08"
+
+identity:
+  name: "Pedro Albertasse"
+  arrival_date: 2026-09-24
+
+visa:
+  subclass: 500
+  condition: 8105
+  cap_hours_fortnight: 48
+  # Teto operacional abaixo do legal: turno casual estoura, e a
+  # responsabilidade pelo limite é sua, não do empregador.
+  operational_cap: 44
+
+study:
+  provider: "ILSC Adelaide"
+  address: "115 Grenfell St, Adelaide SA 5000"
+  lat: -34.9235
+  lon: 138.6055
+  # AM | PM | UNKNOWN — trava ou destrava turnos inteiros.
+  # Deixe UNKNOWN até a matrícula confirmar. O scorer trata
+  # conflito de horário como penalidade parcial enquanto for UNKNOWN.
+  class_pattern: UNKNOWN
+
+english:
+  cefr_on_arrival: A2
+  # ⇩ ATUALIZE ISTO conforme o inglês melhorar. É o campo que mais muda
+  # o resultado. A1 A2 B1 B2 C1 C2.
+  #
+  # Ao subir de nível, duas coisas acontecem sozinhas: vaga com
+  # atendimento ao cliente para de ser penalizada, e o peso da dimensão
+  # de inglês cai (porque deixa de ser o gargalo), sendo redistribuído
+  # entre as outras. A soma continua 100, então as notas de meses
+  # diferentes seguem comparáveis.
+  #
+  # Depois de mudar aqui, rode:  adelaide-jobs score --rescore
+  current_level: A2
+
+transport:
+  has_au_drivers_licence: false
+  has_car: false
+  max_commute_km: 25
+  # Turno que termina depois disso tem risco de não ter transporte
+  # de volta ao CBD.
+  late_return_risk_after: "23:30"
+
+experience_years:
+  hospitality: 0
+  retail: 0
+  warehouse: 0
+  cleaning: 0
+  office_data: 3
+
+certifications: []   # RSA, White Card, Food Handling: nenhum ainda
+
+objectives:
+  primary: CASUAL_ENTRY_BACK_OF_HOUSE
+  secondary: OFFICE_ADMIN_DATA
+  # Terceiro alvo: a formação dele. Peso pequeno (career_bridge = 4),
+  # de propósito — não pode dominar a fila nos primeiros meses. Mas se
+  # aparecer vaga boa de dados, games ou design, ela tem que ser vista.
+  tertiary: TECH_GAMES_DESIGN
+
+# ─── Pesos do score (somam 100) ─────────────────────────────────────
+# Versionados: mude o número da versão ao mexer nos pesos, para
+# conseguir comparar resultados antes/depois.
+scoring:
+  version: "w1"
+  weights:
+    experience_barrier: 25
+    english_load: 20
+    visa_hours_fit: 15
+    commute: 12
+    shift_fit: 10
+    certification_barrier: 8
+    employer_pattern: 6
+    career_bridge: 4
+  # Penalidade aplicada a anúncio repostado sem mudança de conteúdo.
+  ghost_penalty: 15
+  # Score mínimo para a vaga aparecer na fila de candidatura.
+  # O relatório HTML mostra TUDO, com filtro por nota — este corte vale
+  # para `queue` e para o CSV.
+  queue_threshold: 55
+
+# Faixas de nota. Mudar aqui não muda o score, só como ele é rotulado.
+#   A+  89-100  candidate-se hoje
+#   A   78-88   muito boa
+#   A-  70-77   boa
+#   B+  62-69   vale olhar
+#   B   55-61   talvez
+#   C   40-54   só se estiver seco
+#   D    0-39   provavelmente não
+#   X           bloqueada por um knockout
+
+# Termos que fazem a vaga contar como "ponte de carreira" — a formação
+# dele em dados, jogos e design. Adelaide tem polo de games: Mighty
+# Kingdom, Sony PlayStation, Tantalus South, Monkeystack.
+career_keywords:
+  - power bi
+  - powerbi
+  - data analyst
+  - business intelligence
+  - bi developer
+  - data engineer
+  - reporting analyst
+  - dashboard
+  - sql
+  - power automate
+  - automation
+  - generative ai
+  - game designer
+  - game analyst
+  - liveops
+  - qa tester
+  - unity
+  - unreal
+  - ux designer
+  - ui designer
+  - product designer
+  - figma
+  - admin assistant
+  - data entry
+  # ── A profissão dele: DADOS, não recrutamento ─────────────────
+  #    Ele trabalha com dados e relatório numa firma de executive
+  #    search — o cargo é analítico, não é recrutador. Por isso aqui
+  #    entram ferramentas e funções de análise, e NÃO "recruitment
+  #    consultant" nem "talent acquisition", que são o outro lado da
+  #    mesa e não descrevem o que ele faz.
+  #
+  #    Medido na Adzuna em 30/08/2026, raio de 25 km de Adelaide:
+  #      "power bi"          119 vagas   ← o termo mais produtivo
+  #      "business analyst"   77
+  #      "data analyst"       34
+  #      "reporting analyst"  13
+  #    Ou seja: buscar pela FERRAMENTA acha três vezes mais que buscar
+  #    pelo nome do cargo. Por isso a lista pesa em ferramenta.
+  - power bi
+  - powerbi
+  - power query
+  - dax
+  - tableau
+  - looker
+  - looker studio
+  - qlik
+  - advanced excel
+  - excel
+  - sql
+  - python
+  - data analyst
+  - data analytics
+  - analytics
+  - business intelligence
+  - bi developer
+  - bi analyst
+  - business analyst
+  - reporting analyst
+  - reporting officer
+  - insights analyst
+  - data engineer
+  - data quality
+  - data governance
+  - master data
+  - data warehouse
+  - etl
+  - dashboard
+  - dashboards
+  - reporting
+  - mis
+  - crm
+  - salesforce
+  - power automate
+  - automation
+  - rpa
+  - process improvement
+  - data entry
+  - admin assistant
+  - administration officer
+  # ── O nicho onde as duas coisas se encontram ──────────────────
+  #    Research e market mapping numa boutique de search é trabalho
+  #    de dados, e é onde os 3 anos dele contam de verdade. Adelaide
+  #    tem 6 dessas firmas, todas pequenas e sem estrutura própria
+  #    de pesquisa.
+  - research analyst
+  - market mapping
+  - market intelligence
+  # ── Formação: games e design ──────────────────────────────────
+  - game designer
+  - game analyst
+  - game developer
+  - liveops
+  - qa tester
+  - unity
+  - unreal
+  - ux designer
+  - ui designer
+  - product designer
+  - figma
+  - generative ai
+
+# Termos que marcam a vaga como back-of-house (inglês baixo funciona).
+boh_keywords:
+  # Cozinha
+  - kitchen hand
+  - kitchenhand
+  - kitchen assistant
+  - kitchen attendant
+  - kitchen porter
+  - kitchen steward
+  - stewarding
+  - pot wash
+  - potwasher
+  - dishwasher
+  - dish hand
+  - dishy
+  - food services assistant
+  - food service assistant
+  - catering assistant
+  - food production
+  - back of house
+  # Salão sem muita conversa
+  - glass collector
+  - glassie
+  # Supermercado
+  - night fill
+  - nightfill
+  - night filler
+  - replenishment
+  - shelf stacker
+  - grocery
+  - stock
+  - trolley collection
+  # Armazém
+  - storeperson
+  - store person
+  - picker
+  - packer
+  - pick packer
+  - order picker
+  - freight handler
+  - freight sorter
+  - process worker
+  - production worker
+  - factory hand
+  - warehouse
+  # Limpeza e quarto
+  - cleaner
+  - cleaning
+  - housekeeping
+  - housekeeper
+  - room attendant
+  - public area attendant
+  - houseperson
+  - accommodation cleaner
+  - laundry
+  - linen attendant

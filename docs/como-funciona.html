@@ -450,6 +450,27 @@ career_bridge: 4         # é ponte para dados, games ou design?</code></pre>
 <!-- ══════════════════════════════════════════════════════════ -->
 <h2 id="termos">7. Acrescentar um termo de busca</h2>
 
+<div class="aviso">
+  <p><b>Palavra curta é armadilha.</b> As listas de
+  <code>profile.yaml</code> — <code>boh_keywords</code> e
+  <code>career_keywords</code> — viram um único regex, e desde 01/09/2026
+  cada termo entra com <b>fronteira de palavra</b>. Antes disso não entrava, e
+  o estrago foi medido em 6.895 anúncios reais:</p>
+  <ul>
+    <li><code>unity</code> casava dentro de <b>comm<u>unity</u></b> — 70 vagas de
+      <i>Community Support Worker</i> ganhavam bônus de “ponte para dados”</li>
+    <li><code>excel</code> casava dentro de <b><u>excel</u>lent</b> — 633 anúncios,
+      porque “excellent communication skills” está em quase todo anúncio daqui</li>
+    <li><code>mis</code> casava dentro de com<b><u>mis</u></b>sion</li>
+    <li><code>stock</code> casava em “Stock<u>room</u> Manager”</li>
+  </ul>
+  <p>A fronteira aceita o plural de propósito (<code>cleaner</code> pega
+  “Cleaners”), porque anúncio australiano é escrito no plural o tempo todo.
+  Mesmo assim: <b>não ponha termo com menos de quatro letras</b>, e prefira
+  duas palavras a uma.</p>
+</div>
+
+
 <div class="tarefa">
   <h3><span class="n">7</span> Quando você descobre uma palavra nova</h3>
   <p class="quando">Achou um anúncio bom com um termo que o programa não busca.</p>

@@ -96,164 +96,149 @@ scoring:
 #   D    0-39   provavelmente não
 #   X           bloqueada por um knockout
 
-# Termos que fazem a vaga contar como "ponte de carreira" — a formação
-# dele em dados, jogos e design. Adelaide tem polo de games: Mighty
-# Kingdom, Sony PlayStation, Tantalus South, Monkeystack.
+# Termos que fazem a vaga contar como "ponte de carreira" — trabalho
+# de escritório e de dados, que é a formação dele.
+#
+# TODA palavra desta lista foi contada nos 6.895 anúncios reais de
+# Adelaide antes de entrar. O número é quantos títulos a contêm.
+# As 35 que não apareciam nenhuma vez saíram, e as 12 repetidas também.
+#
+# Sobre games: a lista antiga tinha 12 termos de jogos e design
+# (unreal, figma, ux designer, liveops, qa tester...). Nenhum aparece
+# em Adelaide. A pesquisa em docs/FONTES.md achou UMA vaga de games na
+# cidade inteira. Ficaram só dois, para o caso de aparecer.
 career_keywords:
-  - power bi
-  - powerbi
-  - data analyst
-  - business intelligence
-  - bi developer
-  - data engineer
-  - reporting analyst
-  - dashboard
-  - sql
-  - power automate
-  - automation
-  - generative ai
-  - game designer
-  - game analyst
-  - liveops
-  - qa tester
-  - unity
-  - unreal
-  - ux designer
-  - ui designer
-  - product designer
-  - figma
-  - admin assistant
-  - data entry
-  # ── A profissão dele: DADOS, não recrutamento ─────────────────
-  #    Ele trabalha com dados e relatório numa firma de executive
-  #    search — o cargo é analítico, não é recrutador. Por isso aqui
-  #    entram ferramentas e funções de análise, e NÃO "recruitment
-  #    consultant" nem "talent acquisition", que são o outro lado da
-  #    mesa e não descrevem o que ele faz.
-  #
-  #    Medido na Adzuna em 30/08/2026, raio de 25 km de Adelaide:
-  #      "power bi"          119 vagas   ← o termo mais produtivo
-  #      "business analyst"   77
-  #      "data analyst"       34
-  #      "reporting analyst"  13
-  #    Ou seja: buscar pela FERRAMENTA acha três vezes mais que buscar
-  #    pelo nome do cargo. Por isso a lista pesa em ferramenta.
-  - power bi
-  - powerbi
-  - power query
-  - dax
-  - tableau
-  - looker
-  - looker studio
-  - qlik
-  - advanced excel
-  - excel
-  - sql
-  - python
-  - data analyst
-  - data analytics
-  - analytics
-  - business intelligence
-  - bi developer
-  - bi analyst
-  - business analyst
-  - reporting analyst
-  - reporting officer
-  - insights analyst
-  - data engineer
-  - data quality
-  - data governance
-  - master data
-  - data warehouse
-  - etl
-  - dashboard
-  - dashboards
-  - reporting
-  - mis
-  - crm
-  - salesforce
-  - power automate
-  - automation
-  - rpa
-  - process improvement
-  - data entry
-  - admin assistant
-  - administration officer
-  # ── O nicho onde as duas coisas se encontram ──────────────────
-  #    Research e market mapping numa boutique de search é trabalho
-  #    de dados, e é onde os 3 anos dele contam de verdade. Adelaide
-  #    tem 6 dessas firmas, todas pequenas e sem estrutura própria
-  #    de pesquisa.
-  - research analyst
-  - market mapping
-  - market intelligence
-  # ── Formação: games e design ──────────────────────────────────
-  - game designer
-  - game analyst
-  - game developer
-  - liveops
-  - qa tester
-  - unity
-  - unreal
-  - ux designer
-  - ui designer
-  - product designer
-  - figma
-  - generative ai
+  # ── O que Adelaide de fato anuncia como cargo de escritório ────────
+  # Isto é a ponte de verdade: emprego de escritório, experiência local.
+  - receptionist              # 118 títulos
+  - administration officer    # 65
+  - customer service officer  # 38
+  - administration assistant  # 28
+  - accounts payable          # 25
+  - payroll officer           # 24
+  - finance officer           # 17
+  - rostering                 # 15
+  - business support          # 14
+  - project officer           # 13
+  - administrative officer    # 12
+  - office administrator      # 12
+  - scheduling                # 11
+  - accounts receivable       # 10
+  - data entry                # 8
+  - admin assistant           # 7
+  - admin officer             # 5
+  - office assistant          # 5
+  - records officer           # 5
+  - records management        # só na descrição
+  - claims officer            # 1
+  - data officer              # 2
+  - data capture              # 1
 
-# Termos que marcam a vaga como back-of-house (inglês baixo funciona).
+  # ── Análise de dados ───────────────────────────────────────────────
+  - business analyst          # 20
+  - data analyst              # 17
+  - reporting                 # 16 no título, 375 nas descrições
+  - analytics                 # 12
+  - business intelligence     # 7
+  - sap                       # 6
+  - insights                  # 4
+  - workday                   # 4
+  - automation                # 4
+  - salesforce                # 3
+  - python                    # 3
+  - data analytics            # 2
+  - data governance           # 2
+  - power bi                  # 1
+  - sql                       # 1
+  - excel                     # 0 no título, 17 nas descrições.
+                              # Antes casava 633 vezes por causa de
+                              # "excellent" — ver extract._compilar
+  - spreadsheet               # só na descrição
+  - data quality              # só na descrição
+  - process improvement       # só na descrição
+  - crm                       # só na descrição
+  - etl                       # só na descrição
+  - tableau                   # só na descrição
+
+  # ── Games e design: Adelaide tem 1 vaga, medida ────────────────────
+  - graphic designer          # 4
+  - unity                     # 0 no título. Antes casava 70 vezes
+                              # dentro de "community"
+
+# Termos que marcam a vaga como back-of-house — trabalho em que o
+# inglês baixo funciona, porque não há contato com cliente.
+#
+# ISTO VALE 20 PONTOS. É a segunda dimensão mais pesada do cálculo:
+# um título que casa aqui vira english_load = BOH_MINIMAL, cuja
+# mediana de nota é 74. Quem não casa nada cai em UNKNOWN, mediana 64.
+# Dez pontos de diferença por uma palavra faltando na lista.
+#
+# Cada termo foi contado nos 6.895 títulos reais antes de entrar.
+# Saíram 13 que não aparecem uma única vez em Adelaide — são
+# britânicos: pot wash, potwasher, dish hand, dishy, kitchen porter,
+# glass collector, glassie, night fill, night filler, shelf stacker,
+# houseperson, accommodation cleaner, linen attendant.
+#
+# Saiu também "stock", que casava em "Stockroom Manager" e "Stock
+# Supervisor". E saíram as formas longas que a fronteira de palavra já
+# cobre: "pick packer" e "order picker" casam por "picker" e "packer";
+# "warehouse operator" casa por "warehouse"; "kitchen steward" casa
+# por "steward".
+#
+# NÃO estão aqui, de propósito: barista, sales assistant, team member,
+# food and beverage attendant, crew member. São de frente de loja, e
+# com inglês A2 isso é uma barreira de verdade — marcá-los como
+# "inglês mínimo" seria mentir para si mesmo. O extrator já os
+# classifica como MEDIUM pela regra de contato com cliente.
 boh_keywords:
-  # Cozinha
-  - kitchen hand
-  - kitchenhand
-  - kitchen assistant
-  - kitchen attendant
-  - kitchen porter
-  - kitchen steward
-  - stewarding
-  - pot wash
-  - potwasher
-  - dishwasher
-  - dish hand
-  - dishy
-  - food services assistant
-  - food service assistant
-  - catering assistant
-  - food production
-  - back of house
-  # Salão sem muita conversa
-  - glass collector
-  - glassie
-  # Supermercado
-  - night fill
-  - nightfill
-  - night filler
-  - replenishment
-  - shelf stacker
-  - grocery
-  - stock
-  - trolley collection
-  # Armazém
-  - storeperson
-  - store person
-  - picker
-  - packer
-  - pick packer
-  - order picker
-  - freight handler
-  - freight sorter
-  - process worker
-  - production worker
-  - factory hand
-  - warehouse
-  # Limpeza e quarto
-  - cleaner
-  - cleaning
-  - housekeeping
-  - housekeeper
-  - room attendant
-  - public area attendant
-  - houseperson
-  - accommodation cleaner
-  - laundry
-  - linen attendant
+  # ── Cozinha ────────────────────────────────────────────────────────
+  - food services assistant   # 18 títulos
+  - kitchen hand              # 15
+  - commis                    # 12
+  - steward                   # 9  (pega "stewarding" não, ver abaixo)
+  - stewarding                # 4
+  - catering assistant        # 7
+  - kitchenhand               # 5
+  - food production           # 4
+  - kitchen assistant         # 2
+  - kitchen attendant         # 2
+  - dishwasher                # 1
+  - food service assistant    # 1
+  - back of house             # 1
+
+  # ── Supermercado ───────────────────────────────────────────────────
+  - nightfill                 # 4  (uma palavra só; "night fill" não existe)
+  - trolley                   # 3
+  - replenishment             # 2
+  - grocery                   # 2
+
+  # ── Armazém e fábrica ──────────────────────────────────────────────
+  - storeperson               # 82
+  - warehouse                 # 81
+  - forklift                  # 42
+  - packer                    # 20
+  - store person              # 13
+  - picker                    # 10
+  - process worker            # 9
+  - yard hand                 # 8
+  - production operator       # 7
+  - production worker         # 5
+  - machine operator          # 5
+  - assembler                 # 5
+  - factory hand              # 5
+  - loader                    # 4
+  - dispatch                  # 3
+  - freight handler           # 3
+
+  # ── Limpeza e hotel ────────────────────────────────────────────────
+  - cleaner                   # 120
+  - housekeeping              # 33
+  - cleaning                  # 30
+  - housekeeper               # 27
+  - room attendant            # 7
+  - laundry                   # 6
+  - support services          # 6  (Support Services Attendant, SA Health)
+  - porter                    # 5
+  - valet                     # 5
+  - hygiene                   # 4
+  - public area               # 1

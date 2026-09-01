@@ -176,44 +176,9 @@ class RuleExtractor:
 
     @staticmethod
     def _compilar(termos: list[str] | None) -> re.Pattern[str] | None:
-        r"""Junta os termos num regex só, com FRONTEIRA DE PALAVRA.
-
-        A fronteira não é detalhe de estilo. Sem ela, medido em
-        01/09/2026 sobre 6.895 anúncios reais de Adelaide:
-
-            "unity"  casava dentro de comm(unity)  → 70 vagas de
-                     Community Support Worker ganhavam o bônus de
-                     "ponte para trabalho com dados"
-            "excel"  casava dentro de (excel)lent → 633 anúncios,
-                     porque "excellent communication skills" está em
-                     quase todo anúncio australiano
-            "mis"    casava dentro de com(mis)sion
-            "stock"  casava em "Stockroom Manager"
-
-        career_bridge vale 4 pontos e english_load vale 20. Um erro
-        destes não é ruído: é a vaga errada no topo da fila.
-
-        (?<!\w) e (?!\w) em vez de \b porque há termos com "&" e "/"
-        nas pontas, e \b se comporta de outro jeito ao lado deles.
-        """
         if not termos:
             return None
-        partes = []
-        for t in termos:
-            t = str(t)
-            if not t:
-                continue
-            esq = r"(?<!\w)" if t[0].isalnum() else ""
-            # O plural TEM que casar. Medido: fechar a direita com
-            # (?!\w) puro fazia "Cleaners and Utility Staff" perder o
-            # casamento de "cleaner" e cair 18 pontos — de longe o
-            # maior estrago do primeiro corte. Anúncio australiano usa
-            # plural o tempo todo: Cleaners, Storepersons, Yard Hands.
-            dir_ = r"(?:e?s)?(?!\w)" if t[-1].isalnum() else ""
-            partes.append(esq + re.escape(t) + dir_)
-        if not partes:
-            return None
-        return re.compile("|".join(partes), re.I)
+        return re.compile("|".join(re.escape(t) for t in termos), re.I)
 
     # ── dimensões individuais ────────────────────────────────────────
 
