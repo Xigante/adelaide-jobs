@@ -72,6 +72,25 @@ CREATE TABLE IF NOT EXISTS job_sighting (
 CREATE INDEX IF NOT EXISTS idx_sight_cluster ON job_sighting(cluster_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sight_src ON job_sighting(source, source_id);
 
+-- O cadastro de empregadores. Existe por um motivo só: um anúncio sai
+-- do ar, mas a empresa continua existindo e continua contratando o
+-- mesmo tipo de gente. `job_cluster` é a vaga e é volátil; isto aqui é
+-- a empresa, e nada nunca apaga uma linha daqui. É desta tabela que
+-- sai a lista de portas em que vale a pena bater com currículo na mão.
+CREATE TABLE IF NOT EXISTS employer (
+    employer_canon TEXT PRIMARY KEY,
+    employer       TEXT,      -- como aparece escrito, versão mais recente
+    primeira_vaga  TEXT,      -- data em que apareceu a primeira vaga
+    ultima_vaga    TEXT,
+    total_vagas    INTEGER DEFAULT 0,   -- clusters distintos, não sightings
+    cargos         TEXT,      -- JSON {título: quantas vezes} — o que pedem
+    suburbs        TEXT,      -- JSON {subúrbio: quantas vezes} — onde ficam
+    fontes         TEXT,      -- JSON [fonte]
+    site           TEXT,      -- melhor URL já vista
+    melhor_nota    INTEGER    -- maior nota que uma vaga desta empresa tirou
+);
+CREATE INDEX IF NOT EXISTS idx_employer_nome ON employer(employer);
+
 CREATE TABLE IF NOT EXISTS run_log (
     run_id     TEXT PRIMARY KEY,
     started_at TEXT,
@@ -226,6 +245,140 @@ class Database:
             f"UPDATE job_cluster SET {sets} WHERE cluster_id=?",
             [*updates.values(), cluster_id],
         )
+
+    # ── cadastro de empregadores ────────────────────────────────────
+
+    def upsert_employer(self, job: Job, employer_canon: str,
+                        novo_cluster: bool) -> None:
+        """Registra a empresa. Chamado a cada ingest, nunca apaga nada.
+
+        `total_vagas` só cresce quando o cluster é novo — senão a mesma
+        vaga vista cinco vezes viraria cinco vagas. `cargos` e `suburbs`
+        são contadores acumulados: é a resposta para "o que esta empresa
+        costuma contratar", que é o que interessa quando você decide em
+        que porta bater.
+        """
+        hoje = date.today().isoformat()
+        atual = self.conn.execute(
+            "SELECT * FROM employer WHERE employer_canon=?", (employer_canon,)
+        ).fetchone()
+
+        cargos = json.loads(atual["cargos"]) if atual and atual["cargos"] else {}
+        suburbs = json.loads(atual["suburbs"]) if atual and atual["suburbs"] else {}
+        fontes = json.loads(atual["fontes"]) if atual and atual["fontes"] else []
+
+        titulo = (job.title or "").strip()
+        if titulo and (novo_cluster or titulo not in cargos):
+            # Conta uma vez por vaga distinta. Um título que reaparece na
+            # mesma vaga não é a empresa contratando de novo.
+            cargos[titulo] = cargos.get(titulo, 0) + 1
+        bairro = (job.suburb or "").strip()
+        if bairro and novo_cluster:
+            suburbs[bairro] = suburbs.get(bairro, 0) + 1
+        if job.source and job.source not in fontes:
+            fontes.append(job.source)
+
+        # Um título só, repetido mil vezes, não ajuda ninguém a decidir.
+        # Fica com os 40 mais frequentes; o resto é ruído de anúncio.
+        if len(cargos) > 40:
+            cargos = dict(sorted(cargos.items(), key=lambda kv: -kv[1])[:40])
+
+        if atual is None:
+            self.conn.execute(
+                "INSERT INTO employer (employer_canon, employer, primeira_vaga, "
+                "ultima_vaga, total_vagas, cargos, suburbs, fontes, site) "
+                "VALUES (?,?,?,?,?,?,?,?,?)",
+                (employer_canon, job.employer, hoje, hoje, 1 if novo_cluster else 0,
+                 json.dumps(cargos, ensure_ascii=False),
+                 json.dumps(suburbs, ensure_ascii=False),
+                 json.dumps(fontes, ensure_ascii=False), job.url),
+            )
+            return
+
+        self.conn.execute(
+            "UPDATE employer SET employer=?, ultima_vaga=?, total_vagas=?, "
+            "cargos=?, suburbs=?, fontes=?, site=COALESCE(site, ?) "
+            "WHERE employer_canon=?",
+            (job.employer or atual["employer"], hoje,
+             (atual["total_vagas"] or 0) + (1 if novo_cluster else 0),
+             json.dumps(cargos, ensure_ascii=False),
+             json.dumps(suburbs, ensure_ascii=False),
+             json.dumps(fontes, ensure_ascii=False), job.url, employer_canon),
+        )
+
+    def rebuild_employers(self) -> int:
+        """Recalcula o cadastro a partir dos clusters que existem hoje.
+
+        MERGE, não substituição: uma empresa cujo anúncio saiu do ar
+        continua na tabela com os números que tinha. É o que faz o
+        cadastro ser cadastro e não um retrato do dia.
+
+        Serve para duas coisas: encher a tabela na primeira vez, e
+        corrigir contadores que tenham derivado.
+        """
+        linhas = self.conn.execute(
+            "SELECT employer_canon, employer, title, suburb, url, source, "
+            "       first_seen, last_seen, score "
+            "FROM job_cluster WHERE employer_canon IS NOT NULL "
+            "  AND employer_canon <> ''"
+        ).fetchall()
+
+        acc: dict[str, dict[str, Any]] = {}
+        for r in linhas:
+            e = acc.setdefault(r["employer_canon"], {
+                "employer": r["employer"], "primeira": r["first_seen"],
+                "ultima": r["last_seen"], "total": 0, "cargos": {},
+                "suburbs": {}, "fontes": [], "site": None, "nota": None,
+            })
+            e["total"] += 1
+            if r["employer"]:
+                e["employer"] = r["employer"]
+            for campo, valor, menor in (("primeira", r["first_seen"], True),
+                                        ("ultima", r["last_seen"], False)):
+                if valor and (not e[campo] or
+                              (valor < e[campo] if menor else valor > e[campo])):
+                    e[campo] = valor
+            if r["title"]:
+                e["cargos"][r["title"]] = e["cargos"].get(r["title"], 0) + 1
+            if r["suburb"]:
+                e["suburbs"][r["suburb"]] = e["suburbs"].get(r["suburb"], 0) + 1
+            if r["source"] and r["source"] not in e["fontes"]:
+                e["fontes"].append(r["source"])
+            if r["url"] and not e["site"]:
+                e["site"] = r["url"]
+            if r["score"] is not None and (e["nota"] is None or r["score"] > e["nota"]):
+                e["nota"] = r["score"]
+
+        for canon, e in acc.items():
+            cargos = dict(sorted(e["cargos"].items(), key=lambda kv: -kv[1])[:40])
+            self.conn.execute(
+                "INSERT INTO employer (employer_canon, employer, primeira_vaga, "
+                "  ultima_vaga, total_vagas, cargos, suburbs, fontes, site, melhor_nota) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?) "
+                "ON CONFLICT(employer_canon) DO UPDATE SET "
+                "  employer=excluded.employer, "
+                "  primeira_vaga=MIN(COALESCE(employer.primeira_vaga, excluded.primeira_vaga), "
+                "                    excluded.primeira_vaga), "
+                "  ultima_vaga=NULLIF(MAX(COALESCE(employer.ultima_vaga, ''), "
+                "                          COALESCE(excluded.ultima_vaga, '')), ''), "
+                "  total_vagas=MAX(employer.total_vagas, excluded.total_vagas), "
+                "  cargos=excluded.cargos, suburbs=excluded.suburbs, "
+                "  fontes=excluded.fontes, "
+                "  site=COALESCE(employer.site, excluded.site), "
+                "  melhor_nota=NULLIF(MAX(COALESCE(employer.melhor_nota, -1), "
+                "                         COALESCE(excluded.melhor_nota, -1)), -1)",
+                (canon, e["employer"], e["primeira"], e["ultima"], e["total"],
+                 json.dumps(cargos, ensure_ascii=False),
+                 json.dumps(e["suburbs"], ensure_ascii=False),
+                 json.dumps(e["fontes"], ensure_ascii=False), e["site"], e["nota"]),
+            )
+        self.conn.commit()
+        return len(acc)
+
+    def empregadores(self) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM employer ORDER BY total_vagas DESC, employer"
+        ).fetchall()
 
     def insert_sighting(
         self,

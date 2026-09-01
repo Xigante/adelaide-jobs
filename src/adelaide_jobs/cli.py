@@ -108,12 +108,15 @@ def cmd_collect(args: argparse.Namespace) -> int:
         # isto ninguém acha o resultado.
         csv_path = export.to_csv(db, "exports/fila.csv", cfg.queue_threshold)
         html_path = export.to_html(db, "exports/vagas.html", cfg.queue_threshold)
+        export.empregadores_to_csv(db, "exports/empregadores.csv")
+        emp_json = export.empregadores_to_json(db, "exports/empregadores.json")
     print()
     print("─" * 62)
     print("  SEUS RESULTADOS")
     print("─" * 62)
     print(f"  Abra no navegador : {html_path.resolve()}")
     print(f"  Planilha (Excel)  : {csv_path.resolve()}")
+    print(f"  Cadastro de empresas: {emp_json.resolve()}")
     print(f"  Banco completo    : {Path(args.db).resolve()}")
     print()
     print("  Na linha de comando:  adelaide-jobs queue")
@@ -197,6 +200,14 @@ def cmd_export(args: argparse.Namespace) -> int:
         print(f"Planilha   : {path.resolve()}")
         pagina = export.to_html(db, args.html, threshold, args.limit)
         print(f"Navegador  : {pagina.resolve()}")
+        # O cadastro de empregadores. Sai sempre: é barato e é o que
+        # alimenta a aba Empresas do material.
+        db.rebuild_employers()
+        base = Path(args.csv).parent
+        emp_csv = export.empregadores_to_csv(db, base / "empregadores.csv")
+        emp_json = export.empregadores_to_json(db, base / "empregadores.json")
+        print(f"Empresas   : {emp_csv.resolve()}")
+        print(f"             {emp_json.resolve()}")
         if args.sheets:
             try:
                 print("Sheets:", export.to_sheets(db, threshold, args.limit))

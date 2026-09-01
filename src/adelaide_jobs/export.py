@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import csv
 import html
+import json
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Sequence
@@ -57,6 +59,189 @@ def to_csv(db: Database, path: str | Path, threshold: int = 55, limit: int = 500
         writer.writeheader()
         for row in rows:
             writer.writerow(_row_to_export(row))
+    return out
+
+
+# ══ Cadastro de empregadores ═════════════════════════════════════════
+#
+# Isto NÃO é a fila de vagas. A fila responde "onde me candidato hoje";
+# o cadastro responde "quem contrata gente como eu em Adelaide" — e
+# continua respondendo depois que o anúncio saiu do ar. É a lista de
+# portas para bater com currículo impresso.
+
+# Heurística de exibição, e só de exibição: serve para filtrar a aba
+# por setor. Quem decide se a vaga presta é o scoring.py, não isto.
+FAMILIAS: list[tuple[str, str]] = [
+    ("limpeza",     r"clean|housekeep|janitor|laundry|washroom"),
+    ("armazém",     r"warehouse|pick|pack|freight|forklift|storeperson|store person|"
+                    r"courier|delivery|driver|logistic|dispatch|loader"),
+    ("cozinha",     r"kitchen|chef|cook|barista|wait|bar\b|food service|catering|"
+                    r"caf[eé]|restaurant|dish|barback|glass"),
+    ("varejo",      r"retail|checkout|customer service|team member|merchandis|"
+                    r"sales assistant|shop|store\b|cashier"),
+    ("saúde",       r"nurse|care worker|aged care|health|clinical|medical|patient|"
+                    r"disability|support worker"),
+    ("dados",       r"\bdata\b|analyst|power bi|reporting|business intelligence|"
+                    r"insights|sql|dashboard"),
+    ("escritório",  r"admin|office|clerk|reception|coordinator|assistant\b|payroll|"
+                    r"accounts|finance"),
+    ("hotel",       r"hotel|hospitality|housekeeping|front office|concierge|motel"),
+    ("construção",  r"construction|labourer|trades|carpent|electric|plumb|paint"),
+]
+
+# Nomes que os agregadores usam quando o anunciante não quis se
+# identificar. Não são empresas, e bater na porta deles é impossível.
+# Ficam no cadastro (nada se perde), mas marcados.
+RE_SEM_NOME = re.compile(
+    r"^(private advertiser|confidential|not specified|anonymous|various|"
+    r"n/?a|undisclosed|company confidential)\.?$", re.I)
+
+
+# "escritório" pega admin/assistant/coordinator, que aparecem em quase
+# toda empresa grande — sem este peso, a SA Health inteira vira
+# escritório em vez de saúde. É desempate de exibição, nada mais.
+PESO = {"escritório": 0.55}
+
+
+def _setores(cargos: dict[str, int], quantos: int = 2) -> list[str]:
+    """Os setores da empresa, pelos cargos que ela mais anuncia.
+
+    Devolve até dois de propósito. Uma rede de supermercado anuncia
+    caixa e repositor de depósito; forçar um rótulo só faria ela sumir
+    de um dos dois filtros.
+    """
+    texto = " ".join(cargos).lower()
+    marcados = []
+    for nome, padrao in FAMILIAS:
+        n = len(re.findall(padrao, texto)) * PESO.get(nome, 1.0)
+        if n:
+            marcados.append((n, nome))
+    marcados.sort(reverse=True)
+    return [n for _, n in marcados[:quantos]] or ["outros"]
+
+
+def _link_limpo(url: str | None) -> str:
+    """Tira a query string dos links da Adzuna.
+
+    Eles vêm com `utm_source=<app_id>` grudado. O link funciona sem isso,
+    e o cadastro vai parar numa página pública — o app_id não tem por que
+    passear por lá.
+    """
+    if not url:
+        return ""
+    if "adzuna." in url:
+        return url.split("?", 1)[0]
+    return url
+
+
+# Nome de empresa vindo de scraping chega com BOM e espaço de largura
+# zero grudado. Invisível na tela, mas quebra ordenação e busca: quem
+# digita "Dymocks" não acha "\ufeffDymocks".
+RE_INVISIVEL = re.compile(r"[\ufeff\u200b-\u200d\u2060]")
+
+
+def _empregador_linha(row: Any, cargos_max: int = 8,
+                      corte: int = 0) -> dict[str, Any]:
+    cargos = json.loads(row["cargos"] or "{}")
+    suburbs = json.loads(row["suburbs"] or "{}")
+    ordenados = [t for t, _ in sorted(cargos.items(), key=lambda kv: -kv[1])]
+    if corte:
+        ordenados = [t if len(t) <= corte else t[:corte - 1].rstrip() + "…"
+                     for t in ordenados]
+    bairros = sorted(suburbs.items(), key=lambda kv: -kv[1])
+    return {
+        "nome": RE_INVISIVEL.sub("", row["employer"] or "").strip(),
+        "chave": row["employer_canon"],
+        "vagas": row["total_vagas"] or 0,
+        "setores": _setores(cargos),
+        "cargos": ordenados[:cargos_max],
+        "cargos_total": len(cargos),
+        "bairros": [b for b, _ in bairros[:3]],
+        "primeira": row["primeira_vaga"] or "",
+        "ultima": row["ultima_vaga"] or "",
+        "nota": row["melhor_nota"],
+        "fontes": json.loads(row["fontes"] or "[]"),
+        "link": _link_limpo(row["site"]),
+        "sem_nome": bool(RE_SEM_NOME.match((row["employer"] or "").strip())),
+    }
+
+
+COLUNAS_EMPREGADOR = ["nome", "vagas", "setor", "cargos", "bairros",
+                      "primeira", "ultima", "nota", "fontes", "link"]
+
+
+def empregadores_to_csv(db: Database, path: str | Path) -> Path:
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w", newline="", encoding="utf-8-sig") as fh:
+        w = csv.DictWriter(fh, fieldnames=COLUNAS_EMPREGADOR)
+        w.writeheader()
+        for row in db.empregadores():
+            d = _empregador_linha(row, cargos_max=40)
+            w.writerow({
+                "nome": d["nome"], "vagas": d["vagas"],
+                "setor": " | ".join(d["setores"]),
+                "cargos": " | ".join(d["cargos"]),
+                "bairros": " | ".join(d["bairros"]),
+                "primeira": d["primeira"], "ultima": d["ultima"],
+                "nota": d["nota"] if d["nota"] is not None else "",
+                "fontes": " | ".join(d["fontes"]), "link": d["link"],
+            })
+    return out
+
+
+def empregadores_to_json(db: Database, path: str | Path) -> Path:
+    """O arquivo que alimenta a aba Empresas do material.
+
+    Chaves de uma letra, e não é preciosismo: são 2.995 empresas, o
+    material é embutido num HTML único, e ele abre isso no celular na
+    rua. Só o nome das chaves, escrito por extenso, custava 165 KB.
+
+        n  nome            v  quantas vagas já teve
+        s  setores (1-2)   c  até 3 cargos, cortados em 52 caracteres
+        b  até 2 bairros   p  melhor nota que uma vaga dela tirou
+        de / ate           primeira e última vaga vista (AAAA-MM-DD)
+        a  id da Adzuna    u  URL inteira, quando não é da Adzuna
+        x  1 = anunciante sem nome ("Private Advertiser" e afins)
+        t  total de cargos distintos, só quando passa dos 3 mostrados
+
+    Campo ausente = vazio. Quem quer tudo, com os nomes por extenso e
+    os 40 cargos, abre o empregadores.csv.
+    """
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    dados = []
+    for r in db.empregadores():
+        d = _empregador_linha(r, cargos_max=3, corte=52)
+        e: dict[str, Any] = {"n": d["nome"], "v": d["vagas"], "s": d["setores"]}
+        if d["cargos"]:
+            e["c"] = d["cargos"]
+        if d["cargos_total"] > len(d["cargos"]):
+            e["t"] = d["cargos_total"]
+        if d["bairros"]:
+            e["b"] = d["bairros"][:2]
+        if d["primeira"]:
+            e["de"] = d["primeira"]
+        if d["ultima"]:
+            e["ate"] = d["ultima"]
+        if d["nota"] is not None:
+            e["p"] = d["nota"]
+        link = d["link"]
+        if link.startswith("https://www.adzuna.com.au/details/"):
+            e["a"] = link.rsplit("/", 1)[-1]
+        elif link:
+            e["u"] = link
+        if d["sem_nome"]:
+            e["x"] = 1
+        dados.append(e)
+
+    out.write_text(json.dumps({
+        "gerado_em": datetime.now().isoformat(timespec="seconds"),
+        "total": len(dados),
+        "adzuna": "https://www.adzuna.com.au/details/",
+        "empresas": dados,
+    }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     return out
 
 

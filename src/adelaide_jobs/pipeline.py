@@ -36,6 +36,7 @@ class RunReport:
     blocked: int = 0
     scored: int = 0
     ghosts: int = 0
+    empregadores: int = 0
     by_source: dict[str, int] = field(default_factory=dict)
     knockouts: dict[str, int] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
@@ -49,6 +50,7 @@ class RunReport:
             f"bloqueadas        {self.blocked}",
             f"pontuadas         {self.scored}",
             f"fantasmas         {self.ghosts}",
+            f"empresas no cadastro {self.empregadores}",
         ]
         if self.by_source:
             lines.append("por fonte:")
@@ -144,11 +146,17 @@ class Pipeline:
                 report.duplicates += 1
 
             key_hash, _ = canon_key(job.employer, job.title, job.suburb, job.postcode)
+            emp_canon = canon_employer(job.employer)
             with self.db.tx():
+                # O cadastro de empregadores é atualizado junto, na mesma
+                # transação. Um anúncio sai do ar; a empresa não. É desta
+                # tabela que sai a lista de portas para bater com currículo.
+                if emp_canon:
+                    self.db.upsert_employer(job, emp_canon, stage == "NEW")
                 self.db.upsert_cluster(cluster_id, {
                     "canon_key": key_hash,
                     "role_canon": canon_role(job.title),
-                    "employer_canon": canon_employer(job.employer),
+                    "employer_canon": emp_canon,
                     "title": job.title,
                     "employer": job.employer,
                     "suburb": job.suburb,
@@ -260,5 +268,9 @@ class Pipeline:
 
         report = self.ingest(all_jobs)
         report = self.score_pending(report)
+        # Depois de pontuar: recalcula o cadastro para pegar a melhor nota
+        # de cada empresa. É MERGE — empresa cujo anúncio saiu do ar
+        # continua no cadastro com os números que tinha.
+        report.empregadores = self.db.rebuild_employers()
         report.errors = errors
         return report
