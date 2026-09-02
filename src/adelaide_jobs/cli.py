@@ -196,9 +196,9 @@ def cmd_export(args: argparse.Namespace) -> int:
     cfg = config_mod.load()
     threshold = args.threshold if args.threshold is not None else cfg.queue_threshold
     with Database(args.db) as db:
-        path = export.to_csv(db, args.csv, threshold, args.limit)
+        path = export.to_csv(db, args.csv, threshold, args.limit or 500)
         print(f"Planilha   : {path.resolve()}")
-        pagina = export.to_html(db, args.html, threshold, args.limit)
+        pagina = export.to_html(db, args.html, threshold, args.limit or 3000)
         print(f"Navegador  : {pagina.resolve()}")
         # O cadastro de empregadores. Sai sempre: é barato e é o que
         # alimenta a aba Empresas do material.
@@ -296,7 +296,15 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("--html", default="exports/vagas.html")
     e.add_argument("--sheets", action="store_true", help="também escreve no Google Sheets")
     e.add_argument("--threshold", type=int, default=None)
-    e.add_argument("--limit", type=int, default=500)
+    # Sem valor, cada saída usa o limite que faz sentido para ela:
+    # a planilha é fila de trabalho (500 cabe numa manhã), o HTML é
+    # o relatório inteiro para navegar (3.000).
+    #
+    # Com default=500 aqui, o ATUALIZAR-VAGAS.bat truncava o
+    # relatório todo dia sem avisar: `collect` escrevia 3.000 linhas
+    # e o `export` logo depois sobrescrevia com 500. Ele abria o
+    # relatório e via 500 de 7.819.
+    e.add_argument("--limit", type=int, default=None)
     e.set_defaults(func=cmd_export)
 
     st = sub.add_parser("stats", help="estado do banco")
