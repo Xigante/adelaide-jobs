@@ -1,43 +1,52 @@
 """Conserta o banco de vagas quando o SQLite diz que ele esta corrompido.
 
 QUANDO USAR
-    Quando a coleta morre com esta linha:
-        sqlite3.DatabaseError: database disk image is malformed
+    Quando a coleta parar com uma destas:
+        database disk image is malformed
+        invalid page number
+        database is locked / not a database
 
-O QUE ACONTECEU NO DIA 01/09/2026 (o caso que originou este arquivo)
-    Uma pagina interna da arvore de job_cluster ficou com os rowids fora
-    de ordem. O SQLite acha uma linha por busca binaria dentro da pagina;
-    com a ordem errada, a busca desce na sub-arvore errada e o banco
-    inteiro passa a mentir: `SELECT count(*)` dizia 5.278, um `SELECT *`
-    devolvia 5.032, e o indice conhecia 5.526. Qualquer UPDATE estourava.
+A PRIMEIRA COISA QUE ELE TENTA NAO E RECONSTRUIR
 
-O QUE ESTE ARQUIVO FAZ
-    Nao tenta consertar a pagina. Cria um banco novo em folha e copia
-    para dentro dele tudo que ainda da para ler, nesta ordem:
+    Na maioria das vezes o banco esta INTEIRO e o culpado e um arquivo
+    ao lado: o `jobs.db-wal`.
 
-      1. as tabelas, com o mesmo esquema do banco velho;
-      2. as linhas de job_cluster que a leitura sequencial alcanca;
-      3. as sightings — MENOS as orfas, isto e, as que apontam para um
-         cluster que se perdeu. Isso e importante: se uma sighting orfa
-         ficar no banco, `sighting_exists` devolve True na proxima coleta,
-         o pipeline pula a vaga, e o cluster nunca volta. A vaga sumiria
-         para sempre. Descartando a sighting, a proxima coleta rebusca a
-         vaga e recria o cluster do zero;
-      4. os indices, por ultimo, ja sobre dados corretos.
+    O SQLite escreve primeiro num diario chamado WAL e so depois passa
+    o conteudo para o banco. Se o `jobs.db` for substituido por outro
+    arquivo e o `-wal` do banco ANTIGO ficar para tras, na proxima
+    abertura o SQLite aplica paginas velhas em cima do banco novo. O
+    resultado e exatamente "invalid page number".
 
-    No fim roda integrity_check no banco novo. So troca se der 'ok'. O
-    banco velho e sempre guardado ao lado, com a data no nome.
+    Aconteceu aqui em 02/09/2026: o banco tinha 6.895 vagas, todas
+    intactas, e o `-wal` ao lado era uma hora mais VELHO que ele.
+    Bastou mover o `-wal` e o `-shm` para o lado.
 
-O QUE SE PERDE
-    As linhas de job_cluster cujas paginas foram sobrescritas. Elas
-    voltam na proxima coleta se o anuncio ainda estiver no ar — o que
-    se perde de verdade e o `first_seen` delas, ou seja, ha quanto tempo
-    aquele anuncio esta publicado. E o sinal de "vaga fantasma".
+    Como reconhecer: o `-wal` com data mais velha que o `.db`. Nunca e
+    normal. WAL legitimo e sempre mais novo ou do mesmo instante.
 
-COMO RODAR
-    Duplo clique no REPARAR-BANCO.bat. Ou, no terminal:
+    Por isso a ordem aqui e:
+        1. ha WAL orfao?  move para o lado e testa de novo
+        2. ainda quebrado? aí sim reconstroi
+        3. so troca se o banco novo passar no teste
+
+O QUE A RECONSTRUCAO FAZ
+    Cria um banco novo em folha e copia tudo que ainda da para ler:
+    todas as tabelas, inclusive o cadastro de empregadores, e depois os
+    indices. Descarta as sightings orfas — as que apontam para um
+    cluster que se perdeu. Isso e importante: se uma sighting orfa
+    ficar, `sighting_exists` devolve True na proxima coleta, o pipeline
+    pula a vaga, e o cluster nunca volta. A vaga sumiria para sempre.
+
+O QUE NUNCA E APAGADO
+    Nada. O banco de antes fica ao lado com a data no nome, e o WAL
+    movido tambem.
+
+RODAR
+    Duplo clique no REPARAR-BANCO.bat, ou:
         python reparar_banco.py
 """
+from __future__ import annotations
+
 import datetime
 import pathlib
 import shutil
@@ -46,17 +55,47 @@ import sys
 
 BANCO = pathlib.Path.home() / ".adelaide-jobs" / "jobs.db"
 
+# sqlite_stat1 e companhia sao internas: o SQLite recusa um CREATE TABLE
+# com esses nomes. O ANALYZE que roda depois da coleta cria a
+# sqlite_stat1, e foi ela que derrubou a reconstrucao em 02/09/2026 com
+# "object name reserved for internal use".
+def _propria_do_sqlite(nome: str) -> bool:
+    return nome.lower().startswith("sqlite_")
+
 
 def diz(msg: str = "") -> None:
     print(msg, flush=True)
 
 
 def integridade(caminho: pathlib.Path, limite: int = 5) -> list[str]:
-    con = sqlite3.connect(f"file:{caminho}?mode=ro", uri=True)
+    """['ok'] se estiver bom, senao as mensagens do SQLite."""
+    try:
+        con = sqlite3.connect(f"file:{caminho}?mode=ro", uri=True)
+    except sqlite3.DatabaseError as exc:
+        return [f"nem abriu: {exc}"]
     try:
         return [m for (m,) in con.execute(f"PRAGMA integrity_check({limite})")]
+    except sqlite3.DatabaseError as exc:
+        return [f"nem abriu: {exc}"]
     finally:
         con.close()
+
+
+def mover_diario(banco: pathlib.Path, sufixo: str) -> list[str]:
+    """Tira o -wal e o -shm da frente. Move, nunca apaga."""
+    movidos = []
+    for parte in ("-wal", "-shm"):
+        arq = banco.with_name(banco.name + parte)
+        if not arq.exists():
+            continue
+        destino = banco.with_name(f"{banco.name}{parte}.{sufixo}")
+        i = 2
+        while destino.exists():
+            destino = banco.with_name(f"{banco.name}{parte}.{sufixo}-{i}")
+            i += 1
+        shutil.move(str(arq), str(destino))
+        movidos.append(destino.name)
+    return movidos
 
 
 def reconstruir(velho: pathlib.Path, novo: pathlib.Path) -> dict:
@@ -64,23 +103,25 @@ def reconstruir(velho: pathlib.Path, novo: pathlib.Path) -> dict:
         novo.unlink()
     v = sqlite3.connect(f"file:{velho}?mode=ro", uri=True)
     n = sqlite3.connect(novo)
-    rel: dict = {}
+    rel: dict = {"tabelas": {}, "orfas": 0}
 
-    esquema = [r[0] for r in v.execute(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND sql IS NOT NULL")]
-    indices = [r[0] for r in v.execute(
-        "SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL")]
-    for sql in esquema:
+    tabelas = [(nome, sql) for nome, sql in v.execute(
+        "SELECT name, sql FROM sqlite_master WHERE type='table' AND sql IS NOT NULL")
+        if not _propria_do_sqlite(nome)]
+    indices = [sql for (nome, sql) in v.execute(
+        "SELECT name, sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL")
+        if not _propria_do_sqlite(nome)]
+    for _, sql in tabelas:
         n.execute(sql)
     n.execute(f"PRAGMA user_version = {v.execute('PRAGMA user_version').fetchone()[0]}")
 
-    def copiar(tabela: str, aceita=None) -> tuple[int, int, int]:
+    def copiar(tabela: str, aceita=None) -> tuple[int, int]:
         cols = [d[1] for d in v.execute(f"PRAGMA table_info({tabela})")]
         lista, marca = ", ".join(cols), ", ".join("?" * len(cols))
-        vistos, guardar, repetidas, recusadas = set(), [], 0, 0
+        vistos, guardar, recusadas = set(), [], 0
         cur = v.execute(f"SELECT {lista} FROM {tabela}")
-        while True:                       # fetchmany: uma pagina ruim no
-            try:                          # meio nao derruba o resto
+        while True:                        # fetchmany: uma pagina ruim no
+            try:                           # meio nao derruba o resto
                 lote = cur.fetchmany(500)
             except sqlite3.DatabaseError:
                 break
@@ -88,7 +129,6 @@ def reconstruir(velho: pathlib.Path, novo: pathlib.Path) -> dict:
                 break
             for linha in lote:
                 if linha[0] in vistos:
-                    repetidas += 1
                     continue
                 vistos.add(linha[0])
                 if aceita and not aceita(linha):
@@ -97,25 +137,37 @@ def reconstruir(velho: pathlib.Path, novo: pathlib.Path) -> dict:
                 guardar.append(linha)
         n.executemany(
             f"INSERT OR IGNORE INTO {tabela} ({lista}) VALUES ({marca})", guardar)
-        return len(guardar), repetidas, recusadas
+        return len(guardar), recusadas
 
-    rel["clusters"], rel["clusters_repetidos"], _ = copiar("job_cluster")
-    vivos = {r[0] for r in n.execute("SELECT cluster_id FROM job_cluster")}
-    rel["sightings"], _, rel["orfas"] = copiar(
-        "job_sighting", aceita=lambda l: l[1] in vivos)
-    try:
-        rel["runs"], _, _ = copiar("run_log")
-    except sqlite3.DatabaseError:
-        rel["runs"] = 0
+    # job_cluster primeiro: e ele que diz quais sightings sao orfas.
+    ordem = [t for t, _ in tabelas]
+    if "job_cluster" in ordem:
+        ordem.remove("job_cluster")
+        ordem.insert(0, "job_cluster")
+
+    vivos: set = set()
+    for tabela in ordem:
+        try:
+            if tabela == "job_sighting" and vivos:
+                qtd, orfas = copiar(tabela, aceita=lambda l: l[1] in vivos)
+                rel["orfas"] = orfas
+            else:
+                qtd, _ = copiar(tabela)
+        except sqlite3.DatabaseError as exc:
+            diz(f"       [!] {tabela}: {exc}")
+            qtd = 0
+        rel["tabelas"][tabela] = qtd
+        if tabela == "job_cluster":
+            vivos = {r[0] for r in n.execute("SELECT cluster_id FROM job_cluster")}
     n.commit()
 
     for sql in indices:
-        n.execute(sql)
-    n.execute("ANALYZE")
+        try:
+            n.execute(sql)
+        except sqlite3.DatabaseError as exc:
+            diz(f"       [!] índice: {exc}")
     n.commit()
     n.execute("VACUUM")
-    rel["com_nota"] = n.execute(
-        "SELECT count(*) FROM job_cluster WHERE score IS NOT NULL").fetchone()[0]
     n.close()
     v.close()
     return rel
@@ -124,7 +176,7 @@ def reconstruir(velho: pathlib.Path, novo: pathlib.Path) -> dict:
 def main() -> int:
     diz()
     diz("  Reparo do banco de vagas")
-    diz("  " + "=" * 52)
+    diz("  " + "=" * 56)
     diz(f"  {BANCO}")
     diz()
 
@@ -133,33 +185,53 @@ def main() -> int:
         diz("  rode o ATUALIZAR-VAGAS.bat para cria-lo.")
         return 0
 
-    for sufixo in ("-wal", "-shm"):
-        extra = BANCO.with_name(BANCO.name + sufixo)
-        if extra.exists():
-            diz(f"  [!] existe um {BANCO.name}{sufixo} ao lado. Feche qualquer")
-            diz("      janela preta do adelaide-jobs antes de continuar.")
-            diz()
+    hoje = datetime.date.today().strftime("%Y%m%d")
 
+    # ── passo 1: o banco esta bom? ──────────────────────────────────
     diz("  [..] Conferindo o banco. Demora alguns segundos.")
-    try:
-        problemas = integridade(BANCO)
-    except sqlite3.DatabaseError as e:
-        problemas = [f"nem abriu: {e}"]
-
+    problemas = integridade(BANCO)
     if problemas == ["ok"]:
+        sobra = [p for p in ("-wal", "-shm")
+                 if BANCO.with_name(BANCO.name + p).exists()]
         diz("  [ok] O banco esta integro. Nao mexi em nada.")
+        if sobra:
+            diz()
+            diz(f"       (existe um {BANCO.name}{sobra[0]} ao lado, mas o banco")
+            diz("        abre normal — e um WAL em uso, nao um orfao.)")
         diz()
         diz("  Se a coleta ainda falha, o problema e outro:")
         diz("  rode o ATUALIZAR-VAGAS.bat e me mande a ultima mensagem.")
         return 0
 
-    diz("  [!!] O banco esta corrompido. Primeiras mensagens:")
-    linhas = [x.strip() for m in problemas for x in str(m).splitlines() if x.strip()]
-    for m in linhas[:4]:
-        diz(f"       {m}")
+    diz("  [!!] O banco nao abriu. Primeiras mensagens:")
+    for linha in [x.strip() for m in problemas for x in str(m).splitlines() if x.strip()][:4]:
+        diz(f"       {linha}")
     diz()
 
-    hoje = datetime.date.today().strftime("%Y%m%d")
+    # ── passo 2: e um WAL orfao? ────────────────────────────────────
+    wal = BANCO.with_name(BANCO.name + "-wal")
+    if wal.exists():
+        mais_velho = wal.stat().st_mtime < BANCO.stat().st_mtime
+        diz("  [..] Existe um jobs.db-wal ao lado" +
+            (" e ele e MAIS VELHO que o banco." if mais_velho else "."))
+        if mais_velho:
+            diz("       Isso nunca e normal: WAL legitimo e sempre mais novo.")
+            diz("       E o diario de um banco ANTERIOR sendo aplicado neste.")
+        diz("  [..] Movendo o diario para o lado e testando de novo...")
+        movidos = mover_diario(BANCO, f"orfao-{hoje}")
+        problemas = integridade(BANCO)
+        if problemas == ["ok"]:
+            diz("  [ok] Era isso. O banco esta inteiro — nao perdi nada.")
+            diz()
+            for m in movidos:
+                diz(f"       guardei {m}")
+            diz()
+            diz("  Pode rodar o ATUALIZAR-VAGAS.bat.")
+            return 0
+        diz("  [..] Nao era so o diario. Vou reconstruir.")
+        diz()
+
+    # ── passo 3: reconstruir ────────────────────────────────────────
     guardado = BANCO.with_name(f"{BANCO.name}.corrompido-{hoje}")
     i = 2
     while guardado.exists():
@@ -171,8 +243,8 @@ def main() -> int:
     diz(f"       guardado como {guardado.name}")
     try:
         rel = reconstruir(BANCO, novo)
-    except Exception as e:
-        diz(f"  [ERRO] A reconstrucao falhou: {type(e).__name__}: {e}")
+    except Exception as exc:                                  # noqa: BLE001
+        diz(f"  [ERRO] A reconstrucao falhou: {type(exc).__name__}: {exc}")
         diz("         Nada foi trocado. O banco velho continua onde estava.")
         return 1
 
@@ -183,30 +255,21 @@ def main() -> int:
         return 1
 
     shutil.move(str(BANCO), str(guardado))
-    for sufixo in ("-wal", "-shm"):
-        antigo = BANCO.with_name(BANCO.name + sufixo)
-        if antigo.exists():
-            shutil.move(str(antigo), str(guardado) + sufixo)
+    mover_diario(BANCO, f"do-corrompido-{hoje}")
     shutil.move(str(novo), str(BANCO))
-    for sufixo in ("-wal", "-shm"):
-        sobra = BANCO.with_name(BANCO.name + sufixo)
-        if sobra.exists():
-            try:
-                sobra.unlink()
-            except OSError:
-                diz(f"  [!] nao consegui remover {sobra.name}; apague na mao.")
 
     diz("  [ok] Pronto. O banco novo passou no teste de integridade.")
     diz()
-    diz(f"       vagas (clusters)   {rel['clusters']}")
-    diz(f"       com nota           {rel['com_nota']}")
-    diz(f"       anuncios vistos    {rel['sightings']}")
-    diz(f"       descartados orfaos {rel['orfas']}  (voltam na proxima coleta)")
+    for tabela, qtd in rel["tabelas"].items():
+        diz(f"       {tabela:16s} {qtd}")
+    if rel["orfas"]:
+        diz(f"       {'descartados':16s} {rel['orfas']} anuncios orfaos "
+            f"(voltam na proxima coleta)")
     diz()
-    diz("  Agora rode o ATUALIZAR-VAGAS.bat. As vagas que se perderam")
-    diz("  voltam sozinhas, desde que o anuncio ainda esteja no ar.")
+    diz("  Agora rode o ATUALIZAR-VAGAS.bat. O que se perdeu volta")
+    diz("  sozinho, desde que o anuncio ainda esteja no ar.")
     diz()
-    diz(f"  Se algo ficou estranho, o banco de antes esta em:")
+    diz(f"  O banco de antes esta em:")
     diz(f"      {guardado}")
     return 0
 
