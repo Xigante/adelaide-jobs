@@ -253,9 +253,15 @@ email_alerts:
   #
   #   7. Aí sim, troque a linha abaixo para `enabled: true`.
   #
+  # LIGADO EM 07/09/2026. O TESTAR-EMAIL.bat conectou na conta
+  # vagas.pedro.adelaide@gmail.com e leu a caixa. Ainda não extraiu vaga
+  # nenhuma porque os alertas foram assinados no mesmo dia e só chegam
+  # na manhã seguinte — mas ler a caixa não custa cota de API, então
+  # deixar ligado desde já só faz a primeira leva entrar sozinha.
+  #
   # Prefira muitos alertas estreitos a poucos amplos: cada e-mail mostra
   # só os primeiros resultados e o resto some sem aviso.
-  enabled: false
+  enabled: true
   legitimacy: own_data
   # Pasta a ler. Com uma CONTA dedicada só para alertas, a caixa de
   # entrada inteira já é a pasta: não precisa de rótulo nem de filtro.
