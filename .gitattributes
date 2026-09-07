@@ -1,0 +1,36 @@
+# ── QUEBRA DE LINHA, FIXADA DE PROPÓSITO ─────────────────────────────
+#
+# Sem este arquivo, quem grava o arquivo decide a quebra de linha, e o
+# resultado é diff sujo: o material tem 1.761 linhas e o git já mostrou
+# 3.522 linhas mudadas quando só uma mudou de verdade. Pior, o `git add`
+# do Windows (core.autocrlf=true) troca a quebra na hora de guardar, de
+# modo que o mesmo arquivo vai e volta entre CRLF e LF a cada envio.
+#
+# Aqui a regra é do repositório, não da máquina.
+
+* text=auto
+
+# Os .bat PRECISAM de CRLF. O cmd.exe do Windows lê rótulo de `goto` e
+# bloco de `if (...)` errado quando o arquivo vem só com LF, e o erro
+# aparece como um comando "não reconhecido" no meio da execução.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# Todo o resto em LF, inclusive no Windows.
+*.py    text eol=lf
+*.html  text eol=lf
+*.md    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.json  text eol=lf
+*.toml  text eol=lf
+*.txt   text eol=lf
+*.cfg   text eol=lf
+
+# Binário: não tocar.
+*.ico   binary
+*.png   binary
+*.jpg   binary
+*.docx  binary
+*.pdf   binary
+*.db    binary
