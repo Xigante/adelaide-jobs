@@ -102,3 +102,45 @@ def test_valor_antigo_e_substituido_nao_duplicado(tmp_path):
     saida = _grava(tmp_path, cheio, IMAP_USER="novo@gmail.com")
     assert saida.count("IMAP_USER=") == 1
     assert "velho@gmail.com" not in saida
+
+
+# ── formato da senha de app ─────────────────────────────────────────
+#
+# Isto existe porque falhou de verdade: foram gravados 19 caracteres
+# com números e hífen, o Gmail respondeu "Invalid credentials" e a
+# mensagem não dizia nada sobre o formato. A senha de app do Google é
+# `[a-z]{16}`, sempre.
+
+def test_senha_de_app_valida_passa():
+    mod = _modulo()
+    assert mod.conferir("abcdefghijklmnop") == []
+
+
+def test_senha_da_conta_e_recusada():
+    """Com número e símbolo — o erro mais comum."""
+    mod = _modulo()
+    fora = mod.conferir("vagas-pedro-2026x")
+    assert any("16" in f for f in fora)
+    assert any("número" in f for f in fora)
+    assert any("símbolo" in f for f in fora)
+
+
+def test_maiuscula_e_recusada():
+    mod = _modulo()
+    fora = mod.conferir("AbcdEfghIjklMnop")
+    assert len(fora) == 1
+    assert "MAIÚSCULA" in fora[0]
+
+
+def test_so_o_comprimento_errado():
+    mod = _modulo()
+    assert mod.conferir("abcdefgh") == ["tem 8 caracteres, e não 16"]
+
+
+def test_a_senha_nunca_aparece_na_mensagem():
+    """O texto do erro vai para a tela e para o print do usuário."""
+    mod = _modulo()
+    segredo = "senhaSuperSecreta-123"
+    texto = " ".join(mod.conferir(segredo))
+    assert segredo not in texto
+    assert "senhaSuperSecreta" not in texto

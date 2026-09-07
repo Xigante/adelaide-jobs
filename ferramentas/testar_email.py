@@ -85,11 +85,35 @@ def main() -> int:
         diz("  pode colar com ou sem os espaços.")
         return 1
 
-    if len(senha.replace(" ", "")) != 16 and host.endswith("gmail.com"):
-        diz(f"  [!] A senha tem {len(senha.replace(' ', ''))} caracteres sem espaços.")
-        diz("      A senha de app do Gmail tem exatamente 16. Se você colou")
-        diz("      a senha da CONTA, o Google vai recusar.")
-        diz()
+    # Parar ANTES de conectar quando a senha claramente não é uma senha
+    # de app. O servidor só sabe responder "Invalid credentials", que não
+    # diz o que está errado — e já custou uma rodada inteira de tentativa
+    # e erro. Aqui dá para dizer exatamente o que está fora do formato.
+    if host.endswith("gmail.com"):
+        from configurar_email import conferir
+        problemas = conferir(senha)
+        if problemas:
+            diz("  [ERRO] A senha gravada no .env não tem o formato de uma")
+            diz("         senha de app do Google.")
+            diz()
+            diz("         A do Google é sempre: 16 letras minúsculas,")
+            diz("         nenhum número, nenhum símbolo. Ela aparece em")
+            diz("         4 grupos de 4:  abcd efgh ijkl mnop")
+            diz()
+            diz("         A que está gravada:")
+            for item in problemas:
+                diz(f"           - {item}")
+            diz()
+            diz("         Nem tentei conectar — o Google ia recusar e a")
+            diz("         resposta dele não explicaria o motivo.")
+            diz()
+            diz("         Pegue o código certo em:")
+            diz("           https://myaccount.google.com/apppasswords")
+            diz("         Se a 'coletor-vagas' já estiver na lista, apague")
+            diz("         e crie outra: o código só aparece uma vez.")
+            diz()
+            diz("         Depois rode o CONFIGURAR-EMAIL.bat de novo.")
+            return 1
 
     diz("  [..] Conectando...")
     try:

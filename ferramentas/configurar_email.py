@@ -58,6 +58,28 @@ def gravar(chaves: dict[str, str]) -> None:
     ENV.write_bytes(fim.join(linhas).encode("utf-8"))
 
 
+def conferir(senha: str) -> list[str]:
+    """Diz o que há de errado com o que foi colado, sem mostrar nada.
+
+    A senha de app do Google é `[a-z]{16}`, sempre. Antes isto aqui só
+    olhava o comprimento e deixava passar com um "s" — e passou: foram
+    gravados 19 caracteres com números e hífen, o servidor respondeu
+    "Invalid credentials" e a mensagem não dizia o que estava errado.
+    """
+    fora = []
+    if len(senha) != 16:
+        fora.append(f"tem {len(senha)} caracteres, e não 16")
+    if any(c.isdigit() for c in senha):
+        fora.append("tem número, e senha de app não tem número")
+    if any(c.isupper() for c in senha):
+        fora.append("tem letra MAIÚSCULA, e senha de app é toda minúscula")
+    simbolos = sorted({c for c in senha if not c.isalnum()})
+    if simbolos:
+        mostra = " ".join(repr(c) for c in simbolos)
+        fora.append(f"tem símbolo ({mostra}), e senha de app só tem letras")
+    return fora
+
+
 def main() -> int:
     diz()
     diz("  Configurar a caixa de alertas")
@@ -102,13 +124,43 @@ def main() -> int:
         diz()
         diz("  [ERRO] Nada foi digitado.")
         return 1
-    if len(senha) != 16:
+
+    problemas = conferir(senha)
+    if problemas:
         diz()
-        diz(f"  [AVISO] A senha ficou com {len(senha)} caracteres.")
-        diz("          As do Google têm 16. Se você colou a senha normal")
-        diz("          da conta por engano, o teste vai falhar.")
+        diz("  " + "=" * 56)
+        diz("  ISSO NÃO PARECE UMA SENHA DE APP")
+        diz("  " + "=" * 56)
         diz()
-        if input("     Gravar assim mesmo? (s/N): ").strip().lower() != "s":
+        diz("  A senha de app do Google é sempre assim:")
+        diz("      16 caracteres, só letras minúsculas.")
+        diz("      Nenhum número. Nenhum símbolo. Nenhuma maiúscula.")
+        diz("      O Google mostra em 4 grupos:  abcd efgh ijkl mnop")
+        diz()
+        diz("  O que você colou:")
+        for p_ in problemas:
+            diz(f"      - {p_}")
+        diz()
+        diz("  Quase sempre isso quer dizer uma destas duas:")
+        diz()
+        diz("    a) você colou a senha com que ENTRA no Gmail.")
+        diz("       Essa não funciona aqui — o Google bloqueia de")
+        diz("       propósito. Tem que ser a senha de app.")
+        diz()
+        diz("    b) você copiou o NOME que deu para a senha de app")
+        diz("       ('coletor-vagas') em vez do código que apareceu")
+        diz("       na caixa amarela depois de clicar em Criar.")
+        diz()
+        diz("  Onde pegar o código certo:")
+        diz("      https://myaccount.google.com/apppasswords")
+        diz("      Se a 'coletor-vagas' já estiver na lista, apague e")
+        diz("      crie outra — o código só aparece uma vez, e depois")
+        diz("      não tem como ver de novo.")
+        diz()
+        if input("     Gravar assim mesmo? digite CONTINUAR: ").strip() != "CONTINUAR":
+            diz()
+            diz("  Nada foi gravado. Rode este botão de novo com o")
+            diz("  código de 16 letras na mão.")
             return 1
 
     gravar({
