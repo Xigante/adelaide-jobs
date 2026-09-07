@@ -58,6 +58,41 @@ def gravar(chaves: dict[str, str]) -> None:
     ENV.write_bytes(fim.join(linhas).encode("utf-8"))
 
 
+PALAVRAS_SUSPEITAS = (
+    "senha", "vaga", "email", "gmail", "google", "adelaide", "australia",
+    "brasil", "trabalho", "coletor", "pedro", "teste", "conta", "acesso",
+)
+
+
+def parece_inventada(senha: str, email: str) -> list[str]:
+    """Acha pedaço com sentido dentro da senha.
+
+    O formato `[a-z]{16}` não separa o código do Google de uma palavra
+    que a pessoa inventou: "albertassevagass" tem 16 letras minúsculas e
+    passa na conferência de formato — e foi exatamente o que aconteceu.
+
+    A confusão de fundo é achar que a senha de app é escolhida. Não é: o
+    Google sorteia e mostra uma vez. Então qualquer pedaço legível lá
+    dentro é sinal de que a pessoa digitou algo dela.
+    """
+    baixa = senha.lower()
+    achados = []
+
+    # Pedaços do próprio endereço: "vagas.pedro.adelaide" -> vagas, pedro...
+    local = email.split("@")[0].lower()
+    candidatos = {p for p in re.split(r"[^a-z]+", local) if len(p) >= 4}
+    candidatos |= {p for p in PALAVRAS_SUSPEITAS if len(p) >= 4}
+
+    for palavra in sorted(candidatos):
+        if palavra in baixa:
+            achados.append(palavra)
+
+    # "vaga" e "vagas" acham o mesmo pedaço: fica só o maior, senão a
+    # mensagem lista a mesma coisa duas vezes e parece defeito.
+    return [a for a in achados
+            if not any(a != b and a in b for b in achados)]
+
+
 def conferir(senha: str) -> list[str]:
     """Diz o que há de errado com o que foi colado, sem mostrar nada.
 
@@ -109,10 +144,16 @@ def main() -> int:
             return 1
 
     diz()
-    diz("  2) A SENHA DE APP de 16 caracteres, a que o Google mostrou")
-    diz("     depois que você criou a 'coletor-vagas'.")
+    diz("  2) O CÓDIGO DE 16 LETRAS que o Google sorteou.")
     diz()
-    diz("     NÃO é a senha que você usa para entrar no Gmail.")
+    diz("     Você NÃO escolhe esse código. O Google inventa e mostra")
+    diz("     uma vez só, numa janelinha, em 4 grupos de 4 letras:")
+    diz()
+    diz("         kemu bcrd lsbq gbcn")
+    diz()
+    diz("     Não é a senha do Gmail. Não é o nome que você deu para a")
+    diz("     senha de app. É esse código sorteado, que não quer dizer")
+    diz("     nada.")
     diz("     Pode colar com os espaços — eu tiro sozinho.")
     diz("     Ela não vai aparecer enquanto você digita. Isso é normal:")
     diz("     cole e aperte Enter, mesmo parecendo que nada aconteceu.")
@@ -124,6 +165,38 @@ def main() -> int:
         diz()
         diz("  [ERRO] Nada foi digitado.")
         return 1
+
+    inventada = parece_inventada(senha, email)
+    if inventada and not conferir(senha):
+        diz()
+        diz("  " + "=" * 56)
+        diz("  ESSA SENHA VOCÊ INVENTOU — E ELA NÃO PODE SER INVENTADA")
+        diz("  " + "=" * 56)
+        diz()
+        diz("  Dentro do que você digitou aparece: "
+            + ", ".join(f"'{p}'" for p in inventada))
+        diz()
+        diz("  A senha de app NÃO é escolhida por você. Quem sorteia é o")
+        diz("  Google, e o que sai são 16 letras sem sentido nenhum:")
+        diz()
+        diz("      kemu bcrd lsbq gbcn")
+        diz("      mbhb rejn erds jrvf")
+        diz()
+        diz("  Se o que você tem na mão dá para ler, é porque é sua — e")
+        diz("  o Google vai recusar.")
+        diz()
+        diz("  Onde o código aparece:")
+        diz("      1. https://myaccount.google.com/apppasswords")
+        diz("      2. Escreva um NOME qualquer (é só etiqueta) e clique")
+        diz("         em Criar.")
+        diz("      3. Abre uma janelinha com o código em letras grandes,")
+        diz("         em 4 grupos de 4. AQUELE é o código.")
+        diz("      4. Copie antes de fechar: ele não aparece mais.")
+        diz()
+        if input("     Gravar assim mesmo? digite CONTINUAR: ").strip() != "CONTINUAR":
+            diz()
+            diz("  Nada foi gravado.")
+            return 1
 
     problemas = conferir(senha)
     if problemas:

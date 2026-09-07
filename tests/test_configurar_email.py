@@ -144,3 +144,44 @@ def test_a_senha_nunca_aparece_na_mensagem():
     texto = " ".join(mod.conferir(segredo))
     assert segredo not in texto
     assert "senhaSuperSecreta" not in texto
+
+
+# ── senha inventada ─────────────────────────────────────────────────
+#
+# O formato [a-z]{16} não basta: "albertassevagass" tem 16 letras
+# minúsculas e passa. A confusão de fundo é achar que a senha de app é
+# escolhida — não é, o Google sorteia. Qualquer pedaço legível dentro
+# dela é sinal de que a pessoa digitou algo dela.
+
+EMAIL = "vagas.pedro.adelaide@gmail.com"
+
+
+def test_pega_o_sobrenome_com_a_palavra_do_email():
+    mod = _modulo()
+    assert mod.parece_inventada("albertassevagass", EMAIL) == ["vagas"]
+
+
+def test_codigo_sorteado_passa_limpo():
+    mod = _modulo()
+    for real in ("kemubcrdlsbqgbcn", "mbhbrejnerdsjrvf", "nchcrnbsdhuusbss"):
+        assert mod.parece_inventada(real, EMAIL) == [], real
+
+
+def test_pega_palavra_generica_mesmo_fora_do_email():
+    mod = _modulo()
+    assert "senha" in mod.parece_inventada("minhasenhaaqui", "x@gmail.com")
+
+
+def test_nao_repete_o_mesmo_pedaco():
+    """'vaga' e 'vagas' acham a mesma coisa: sai só o maior."""
+    mod = _modulo()
+    achados = mod.parece_inventada("albertassevagass", EMAIL)
+    assert achados == ["vagas"]
+    assert "vaga" not in achados
+
+
+def test_a_senha_nao_vaza_no_resultado():
+    mod = _modulo()
+    achados = mod.parece_inventada("albertassevagass", EMAIL)
+    assert "albertassevagass" not in " ".join(achados)
+    assert "albertasse" not in " ".join(achados)
