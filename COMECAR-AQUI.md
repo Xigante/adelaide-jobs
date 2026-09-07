@@ -40,9 +40,18 @@ atalho na área de trabalho. De 2 a 5 minutos.
 | `ferramentas\ATUALIZAR-VAGAS.bat` | **uma vez por dia** | busca vagas novas, recalcula as notas, atualiza o material e abre o relatório |
 | `ferramentas\ENVIAR-PARA-GITHUB.bat` | quando quiser publicar | sobe as melhorias e atualiza o site |
 | `ferramentas\REPARAR-BANCO.bat` | só se der erro | reconstrói o banco de vagas sem perder nada |
+| `ferramentas\TESTAR-EMAIL.bat` | ao ligar os alertas | confere a caixa de alertas sem gastar cota |
 
 Uma vez por dia, não mais: cada rodada gasta 173 das 250 chamadas
 diárias que a Adzuna dá de graça.
+
+---
+
+## Ainda não ligou os alertas por e-mail?
+
+SEEK, LinkedIn, Indeed, Jora, iworkfor.sa.gov.au e Gumtree entram no
+sistema pelos alertas que eles mesmos mandam. São 40 minutos, uma vez.
+O passo a passo está em [docs/ALERTAS-DE-EMAIL.md](docs/ALERTAS-DE-EMAIL.md).
 
 ---
 

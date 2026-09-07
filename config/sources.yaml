@@ -257,9 +257,11 @@ email_alerts:
   # só os primeiros resultados e o resto some sem aviso.
   enabled: false
   legitimacy: own_data
-  # Pasta/rótulo a ler. Com uma pasta dedicada, não precisa filtrar por
-  # remetente — tudo que está lá é alerta.
-  folder: "Vagas"
+  # Pasta a ler. Com uma CONTA dedicada só para alertas, a caixa de
+  # entrada inteira já é a pasta: não precisa de rótulo nem de filtro.
+  # Tem que ser igual ao IMAP_FOLDER do .env — se discordarem, o .env
+  # ganha, e você fica procurando por que o coletor lê a pasta errada.
+  folder: "INBOX"
   # Quantos dias para trás. 3 cobre um fim de semana sem duplicar muito
   # (a deduplicação resolve o resto).
   since_days: 3
