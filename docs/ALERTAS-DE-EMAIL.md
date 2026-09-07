@@ -97,14 +97,54 @@ Adelaide. Depois da busca aparece **Save search** com opção de e-mail.
 
 ---
 
-## Passo 3 — A senha de app (3 min)
+## Passo 3 — A senha de app
 
-Na conta **nova**:
+### O mal-entendido que custa a tarde inteira
 
-1. `myaccount.google.com/security` → ligue a **verificação em duas
-   etapas**. Sem ela o Google nem deixa criar senha de app.
-2. `myaccount.google.com/apppasswords` → nome `coletor-vagas` → copie os
-   **16 caracteres**.
+**Você não escolhe essa senha.** O Google sorteia 16 letras e mostra
+**uma vez só**, numa janelinha que abre depois do botão **Create**.
+Fechou a janelinha, acabou: nem você nem o Google veem de novo. A lista
+que fica na página guarda só o **nome** e a **data**, para você poder
+revogar.
+
+Um código sorteado é ilegível: `kemu bcrd lsbq gbcn`. Se o que você tem
+na mão dá para ler — tem seu nome, tem uma palavra — não é ele.
+
+### 3.1 — Ligar a verificação em duas etapas
+
+`myaccount.google.com/security` → **2-Step Verification** → ligue com o
+número do celular. Sem ela o Google nem oferece senha de app.
+
+### 3.2 — Desligar o que bloqueia
+
+A página de senha de app fica indisponível, ou o botão **Create** não
+abre janela nenhuma, quando a conta está em modo sem senha. Em
+`myaccount.google.com/security`, procure na lista *How you sign in to
+Google*:
+
+| O que está lá | O que fazer |
+|---|---|
+| **Skip password when possible** — `On` | **desligue** |
+| **Passkeys and security keys** — `1 passkey` | se depois de desligar o de cima ainda não funcionar, apague a passkey |
+
+O Google esconde a senha de app de propósito quando a conta é
+"passwordless": para ele, uma conta sem senha não deveria ter uma senha
+avulsa por aí. A troca é consciente — nesta conta, que só recebe alerta
+de vaga, vale a pena.
+
+Você pode religar a passkey depois que o coletor estiver funcionando: a
+senha de app já criada continua valendo.
+
+### 3.3 — Criar
+
+1. Abra `myaccount.google.com/apppasswords`
+2. Escreva um nome qualquer — é só etiqueta — e clique em **Create**
+3. **Abre uma janelinha com o código em letras grandes, em 4 grupos de
+   4.** Aquilo é a senha.
+4. Copie **antes** de fechar.
+
+Se ao clicar em **Create** não abrir janela nenhuma, volte ao 3.2: falta
+desligar alguma coisa.
 
 > Isso **não** é a senha da conta. É uma senha separada, que só serve
 > para ler e-mail e que você revoga nessa mesma página quando quiser.
@@ -112,15 +152,22 @@ Na conta **nova**:
 
 ---
 
-## Passo 4 — Escrever no `.env` (1 min)
+## Passo 4 — Gravar (1 min)
 
-Abra `adelaide-jobs\.env` no Bloco de Notas e preencha três linhas:
+**Ordem invertida de propósito**: deixe o programa esperando *antes* de
+criar a senha, para não ter janela para perder.
 
-```
-IMAP_USER=aconta-nova@gmail.com
-IMAP_PASSWORD=os16caracteres
-IMAP_FOLDER=INBOX
-```
+1. Dois cliques em `ferramentas\CONFIGURAR-EMAIL.bat`
+2. Digite o e-mail, Enter. Ele para, esperando a senha. **Deixe aberto.**
+3. Só agora faça o 3.3 acima
+4. Copie o código e cole na janela preta (Ctrl+V ou botão direito), Enter
+
+Enquanto você cola a senha **a tela não mostra nada** — nem asterisco.
+É de propósito. Cole e aperte Enter mesmo assim.
+
+Pode colar com os espaços do jeito que o Google mostra: o script tira
+sozinho. Ele também recusa o que claramente não é uma senha de app —
+comprimento errado, número, símbolo, ou pedaço legível como seu nome.
 
 O `.env` está no `.gitignore`. Ele nunca vai para o GitHub.
 
@@ -187,7 +234,8 @@ caso.
 | a tela diz | é |
 |---|---|
 | `IMAP_USER ou IMAP_PASSWORD vazios` | você não salvou o `.env`, ou salvou como `.env.txt` |
-| `O servidor recusou o login` | é a senha da conta, não a de app; ou a verificação em duas etapas não está ligada |
+| `O servidor recusou o login` | é a senha da conta, não a de app; ou é uma senha que você inventou (o Google sorteia, você não escolhe) |
+| O botão **Create** não abre janela | *Skip password when possible* ligado, ou passkey — veja 3.2 |
 | `A caixa está vazia` | os alertas ainda não chegaram. Espere um dia |
 | `Conectou e leu, mas não extraiu nenhuma vaga` | as mensagens não são de plataforma conhecida. Me mande uma e eu acrescento o formato |
 | `Não conectei em imap.gmail.com:993` | internet, firewall da empresa, ou antivírus bloqueando a porta 993 |
