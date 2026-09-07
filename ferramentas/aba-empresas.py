@@ -34,6 +34,18 @@ import shutil
 
 import caminhos
 
+
+def _escrever(caminho, texto: str) -> None:
+    """Grava sempre com quebra de linha \n.
+
+    O write_text() do Windows troca todo \n por \r\n. O material tem
+    1.761 linhas: com CRLF o git enxerga o arquivo INTEIRO como mudado
+    a cada coleta, e a mudanca de verdade (uma linha, a dos dados das
+    empresas) some no meio de 3.522 linhas de ruido.
+    """
+    with open(caminho, "w", encoding="utf-8", newline="\n") as f:
+        f.write(texto)
+
 ARQ = caminhos.material()
 DADOS = caminhos.empregadores_json()
 
@@ -405,7 +417,7 @@ def main() -> None:
             raise SystemExit("a aba existe mas não achei o bloco de dados")
         fim = s.find("</script>", i) + len("</script>")
         shutil.copy(ARQ, ARQ.with_suffix(".html.bak-dados"))
-        ARQ.write_text(s[:i] + embutido + s[fim:], encoding="utf-8")
+        _escrever(ARQ, s[:i] + embutido + s[fim:])
         print(f"aba Empresas atualizada · {dados['total']} empresas · "
               f"gerado em {dados.get('gerado_em', '?')}")
         return
@@ -438,7 +450,7 @@ def main() -> None:
     s = troca(s, "</body>", embutido + "\n" + JS_VISITAS + JS_ABA + "</body>",
               "dados e scripts")
 
-    ARQ.write_text(s, encoding="utf-8")
+    _escrever(ARQ, s)
     kb = ARQ.stat().st_size / 1024
     print(f"aba Empresas instalada · {dados['total']} empresas · "
           f"material agora com {kb:.0f} KB")

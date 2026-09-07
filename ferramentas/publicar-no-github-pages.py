@@ -60,14 +60,17 @@ def main() -> None:
         s = s.replace("</footer>", marca + "</footer>", 1)
 
     DESTINO.parent.mkdir(parents=True, exist_ok=True)
-    DESTINO.write_text(s, encoding="utf-8")
+    # newline="\n": sem isto o Windows grava CRLF e o git ve o
+    # arquivo inteiro mudado a cada publicacao.
+    with open(DESTINO, "w", encoding="utf-8", newline="\n") as f:
+        f.write(s)
 
     kb = DESTINO.stat().st_size / 1024
     print(f"docs/index.html gerado · {kb:.0f} KB")
     print(f"noindex: {'sim' if 'noindex' in s else 'NÃO'}")
     print()
     print("Agora:")
-    print("  1. rode o SUBIR-NO-GITHUB.bat (ou `git add -A && git commit && git push`)")
+    print("  1. rode o ENVIAR-PARA-GITHUB.bat (ou `git add -A && git commit && git push`)")
     print("  2. no GitHub: Settings → Pages → Source: Deploy from a branch")
     print("     Branch: main · pasta: /docs · Save")
     print("  3. espere uns 2 minutos e abra:")

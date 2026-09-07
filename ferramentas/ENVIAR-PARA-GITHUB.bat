@@ -49,6 +49,36 @@ REM ---------------------------------------------------------------
 git config --local credential.helper manager >nul 2>&1
 git config --local core.filemode false >nul 2>&1
 
+REM ---------------------------------------------------------------
+REM  O material muda a cada coleta. Publicar a copia do /docs e
+REM  fechar o commit tem que acontecer AQUI: se ficar por conta de
+REM  lembrar, a pagina do celular congela na versao de duas semanas
+REM  atras enquanto o material no PC segue novo. Ja aconteceu.
+REM ---------------------------------------------------------------
+set "VPY=%USERPROFILE%\.venvs\adelaide-jobs\Scripts\python.exe"
+if not exist "%VPY%" set "VPY=python"
+
+echo   [..]   Publicando o material na pasta docs...
+"%VPY%" "%~dp0publicar-no-github-pages.py"
+if errorlevel 1 (
+  echo   [ERRO] Nao consegui gerar a pagina do celular.
+  echo   Rode o ATUALIZAR-VAGAS.bat primeiro e tente de novo.
+  goto FIM
+)
+echo.
+
+echo   [..]   Guardando o que mudou...
+git add -A
+git --no-pager diff --cached --stat
+git diff --cached --quiet
+if errorlevel 1 (
+  git commit -q -m "Coleta de %DATE%: vagas, empresas e pagina do celular"
+  echo   [ok]   Commit criado.
+) else (
+  echo   [ok]   Nada novo para guardar.
+)
+echo.
+
 echo   ---------------------------------------------------
 echo    Commits que vao subir:
 echo   ---------------------------------------------------
