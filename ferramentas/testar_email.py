@@ -129,11 +129,19 @@ def main() -> int:
     except imaplib.IMAP4.error as exc:
         diz(f"  [ERRO] O servidor recusou o login: {exc}")
         diz()
-        diz("  As três causas, em ordem de frequência:")
-        diz("    1. É a senha da conta, não uma senha de app.")
-        diz("    2. A verificação em duas etapas não está ligada — sem ela")
-        diz("       o Google nem deixa criar senha de app.")
+        diz("  A senha tem o formato certo (16 letras minúsculas), então")
+        diz("  não é erro de digitação. As causas, em ordem:")
+        diz()
+        diz("    1. VOCÊ TROCOU A SENHA DA CONTA depois de criar esta.")
+        diz("       O Google revoga TODAS as senhas de app quando a senha")
+        diz("       da conta muda. Não avisa. É só criar outra em")
+        diz("       https://myaccount.google.com/apppasswords e rodar o")
+        diz("       CONFIGURAR-EMAIL.bat de novo.")
+        diz()
+        diz("    2. A senha de app foi apagada naquela mesma página.")
+        diz()
         diz("    3. O e-mail está escrito errado no .env.")
+        diz(f"       Está gravado: {usuario}")
         return 1
     diz("  [ok] Login aceito.")
 

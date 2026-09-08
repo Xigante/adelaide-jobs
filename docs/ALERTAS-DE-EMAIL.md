@@ -236,6 +236,7 @@ caso.
 | `IMAP_USER ou IMAP_PASSWORD vazios` | você não salvou o `.env`, ou salvou como `.env.txt` |
 | `O servidor recusou o login` | é a senha da conta, não a de app; ou é uma senha que você inventou (o Google sorteia, você não escolhe) |
 | O botão **Create** não abre janela | *Skip password when possible* ligado, ou passkey — veja 3.2 |
+| Funcionava e parou de funcionar | você trocou a senha da conta. O Google revoga todas as senhas de app quando isso acontece, sem avisar. Crie outra e rode o `CONFIGURAR-EMAIL.bat` |
 | `A caixa está vazia` | os alertas ainda não chegaram. Espere um dia |
 | `Conectou e leu, mas não extraiu nenhuma vaga` | as mensagens não são de plataforma conhecida. Me mande uma e eu acrescento o formato |
 | `Não conectei em imap.gmail.com:993` | internet, firewall da empresa, ou antivírus bloqueando a porta 993 |
