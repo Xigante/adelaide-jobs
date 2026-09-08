@@ -135,6 +135,32 @@ de vaga, vale a pena.
 Você pode religar a passkey depois que o coletor estiver funcionando: a
 senha de app já criada continua valendo.
 
+### 3.2b — Se você esqueceu a senha DA CONTA
+
+Isto não derruba o coletor: ele não usa a senha da conta, usa a senha de
+app, que já está gravada no `.env` e continua funcionando.
+
+Só que resetar a senha da conta **revoga todas as senhas de app**. Então
+tente, nesta ordem, antes de resetar:
+
+1. **O navegador guardou?** `chrome://settings/passwords` → procure
+   `google.com`. Quase sempre está lá, se a conta foi criada nele.
+2. **A passkey.** Se ela ainda existe nesta máquina, dá para entrar sem
+   senha nenhuma.
+3. **Ainda logado?** Então troque por dentro, em *Security* → *Password*,
+   confirmando pelo celular do 2FA. Trocar sabendo que vai trocar é
+   melhor do que descobrir trancado do lado de fora.
+
+Se mesmo assim precisar resetar: reseta. O prejuízo é criar outra senha
+de app e rodar o `CONFIGURAR-EMAIL.bat` — dois minutos. **Não se perde**
+nem os alertas assinados, nem os e-mails, nem o banco, nem nada do
+repositório.
+
+> **Enquanto está aí, resolva as duas advertências da tela de
+> segurança**: verifique o e-mail de recuperação e cadastre o telefone
+> de recuperação. Conta recém-criada, sem recuperação verificada, é
+> exatamente o perfil em que o Google recusa devolver o acesso depois.
+
 ### 3.3 — Criar
 
 1. Abra `myaccount.google.com/apppasswords`
