@@ -75,6 +75,26 @@ echo       %PROJ%\exports\fila.csv
 echo.
 echo   Para ver todos os caminhos:  "%VAPP%" onde
 echo.
+
+REM ---------------------------------------------------------------
+REM  Publicar e o segundo botao, mas ninguem quer clicar em dois.
+REM  Perguntar aqui mantem os dois passos separados por dentro (se
+REM  o envio falhar, a coleta continua tendo dado certo) e um so
+REM  por fora.
+REM ---------------------------------------------------------------
+echo   ---------------------------------------------------
+echo    Publicar no celular?
+echo   ---------------------------------------------------
+echo.
+echo   Isto atualiza a pagina que voce abre no telefone
+echo   ^(xigante.github.io/adelaide-jobs^) e guarda tudo no
+echo   GitHub. Se disser N, nada se perde: e so rodar o
+echo   ENVIAR-PARA-GITHUB.bat depois.
+echo.
+choice /c SN /n /m "  Publicar agora? (S/N) "
+if errorlevel 2 goto FIM
+echo.
+call "%~dp0ENVIAR-PARA-GITHUB.bat" encadeado
 goto FIM
 
 :ERRO_COLETA

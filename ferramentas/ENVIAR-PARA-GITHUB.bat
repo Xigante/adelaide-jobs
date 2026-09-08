@@ -2,6 +2,11 @@
 setlocal
 title Enviar adelaide-jobs para o GitHub
 
+REM  Chamado com o argumento 'encadeado' (pelo ATUALIZAR-VAGAS.bat),
+REM  este script nao pausa no fim nem oferece a configuracao do Pages:
+REM  quem chamou continua a conversa.
+set "ENCADEADO=%~1"
+
 echo.
 echo   =====================================================
 echo     Enviar para o GitHub
@@ -98,17 +103,21 @@ echo   =====================================================
 echo     Enviado.
 echo   =====================================================
 echo.
-echo   Agora falta LIGAR a pagina, uma vez so:
+echo   A pagina do celular leva ate 2 minutos para atualizar:
+echo       https://xigante.github.io/adelaide-jobs/
 echo.
-echo     1. Abra:
-echo        https://github.com/Xigante/adelaide-jobs/settings/pages
+if /i "%ENCADEADO%"=="encadeado" goto FIM
+echo   ---------------------------------------------------
+echo   Se a pagina der 404, e porque o GitHub Pages ainda
+echo   nao foi ligado. Isso se faz UMA VEZ SO:
+echo.
+echo     1. https://github.com/Xigante/adelaide-jobs/settings/pages
 echo     2. Em "Source" escolha: Deploy from a branch
-echo     3. Branch: main    Pasta: /docs
-echo     4. Clique em Save
-echo     5. Espere 2 minutos e abra:
-echo        https://xigante.github.io/adelaide-jobs/
+echo     3. Branch: main    Pasta: /docs    e clique em Save
 echo.
-choice /c SN /n /m "  Abrir a pagina de configuracao agora? (S/N) "
+echo   Se a pagina ja abre normalmente, ignore isto.
+echo.
+choice /c SN /n /m "  Abrir a configuracao do Pages? (S/N) "
 if errorlevel 2 goto FIM
 start "" "https://github.com/Xigante/adelaide-jobs/settings/pages"
 goto FIM
@@ -140,5 +149,5 @@ start "" "https://git-scm.com/download/win"
 
 :FIM
 echo.
-pause
+if /i not "%ENCADEADO%"=="encadeado" pause
 endlocal
