@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import base64
 import email
+import hashlib
 import imaplib
 import os
 import re
@@ -152,6 +153,66 @@ def desembrulhar(url: str) -> str:
     return url
 
 
+# ── SEEK: o formato novo, que não tem id de vaga no link ────────────
+#
+# Até meados de 2026 o SEEK embrulhava assim, com o destino legível:
+#     click.seek.com.au/f/a/…/h/https%3A%2F%2Fwww.seek.com.au%2Fjob%2F842…
+# e o PADRAO["seek"] pescava o id de dentro. Agora é:
+#     email.s.seek.com.au/uni/ss/c/<91 chars>/4tv/<22>/h0/<48>
+# Opaco: nenhum id, nenhuma URL embutida, nada de recuperar sem seguir
+# o redirecionamento — e seguir 180 links por dia contra o SEEK é
+# exatamente o comportamento automatizado que a gente decidiu não ter.
+#
+# Mas o TEXTO da âncora continua trazendo tudo o que importa:
+#     Applications and Data Analyst
+#     St Andrew's Hospital Inc
+#     Adelaide SA
+#     $141,234.95            (às vezes)
+# Então a vaga sai do texto e o link continua sendo o do rastreador,
+# que funciona quando ele clica. Sem uma requisição sequer ao SEEK.
+RE_SEEK_RASTREADOR = re.compile(r"(?:^|\.)s\.seek\.com(?:\.au)?/uni/", re.I)
+
+RE_LOCAL_SA = re.compile(r"\bSA\b|Adelaide", re.I)
+RE_SALARIO = re.compile(r"^[\$~]|\bper (?:hour|year|annum)\b|\bsuper\b", re.I)
+
+
+def _seek_do_texto(partes: list[str]) -> dict[str, str] | None:
+    """Os pedaços de texto de uma âncora do SEEK → os campos da vaga.
+
+    A ordem no template é título, empregador, local e (às vezes)
+    salário. Em vez de confiar na posição de todos, fixo os dois
+    primeiros — que nunca mudam — e reconheço os outros pelo formato:
+    local casa 'SA'/'Adelaide', salário começa com cifrão ou fala em
+    hora/ano. Assim um campo novo no meio não quebra o resto.
+    """
+    partes = [" ".join(p.split()) for p in partes if p and p.strip()]
+    if len(partes) < 2:
+        return None
+    titulo, empregador = partes[0], partes[1]
+    if len(titulo) < 4 or RUIDO.match(titulo) or len(empregador) < 2:
+        return None
+    local = salario = ""
+    for extra in partes[2:]:
+        if not salario and RE_SALARIO.search(extra):
+            salario = extra
+        elif not local and RE_LOCAL_SA.search(extra):
+            local = extra
+    return {"titulo": titulo[:200], "empregador": empregador[:120],
+            "local": local[:80], "salario": salario[:80]}
+
+
+def _id_sintetico(titulo: str, empregador: str) -> str:
+    """Um id estável para vaga sem id.
+
+    Precisa ser o mesmo toda vez que o mesmo anúncio aparecer, senão
+    cada coleta cria uma vaga nova. Título + empregador normalizados
+    dão isso; o agrupamento por conteúdo cuida do resto quando a mesma
+    vaga chega também pela Adzuna.
+    """
+    semente = re.sub(r"[^a-z0-9]+", " ", f"{titulo}|{empregador}".lower()).strip()
+    return "t" + hashlib.blake2s(semente.encode(), digest_size=7).hexdigest()
+
+
 def identificar(url: str) -> tuple[str, str, str] | None:
     """(plataforma, id, url canônica) para uma URL, ou None se não for vaga."""
     for plataforma, (padrao, molde) in PADROES.items():
@@ -227,12 +288,45 @@ def parse_email(bruto: bytes) -> list[Job]:
     for url in RE_URL.findall(texto):
         registrar(url)
 
+    #: id sintético → campos, para os links opacos do SEEK.
+    por_texto: dict[str, dict[str, str]] = {}
+
     if html:
         sopa = BeautifulSoup(html, "html.parser")
         for ancora in sopa.find_all("a", href=True):
-            registrar(str(ancora["href"]), ancora.get_text(" ", strip=True))
+            href = str(ancora["href"])
+            registrar(href, ancora.get_text(" ", strip=True))
+
+            # Link sem id nenhum: a vaga tem que sair do texto.
+            if RE_SEEK_RASTREADOR.search(href):
+                campos = _seek_do_texto(list(ancora.stripped_strings))
+                if campos:
+                    campos["url"] = href
+                    por_texto.setdefault(
+                        _id_sintetico(campos["titulo"], campos["empregador"]),
+                        campos)
 
     vagas: list[Job] = []
+    for ident, campos in por_texto.items():
+        vagas.append(Job(
+            source="email:seek",
+            source_id=ident,
+            title=campos["titulo"],
+            url=campos["url"],
+            employer=campos["empregador"] or None,
+            # O alerta não traz o anúncio, só a linha do salário. Vai
+            # como descrição porque é a única pista de dinheiro que
+            # existe aqui, e o extrator sabe ler faixa salarial.
+            description=campos["salario"],
+            suburb=campos["local"] or None,
+            state="SA",
+            employment_type=EmploymentType.UNKNOWN,
+            posted_at=quando,
+            legitimacy=Legitimacy.OWN_DATA,
+            raw={"alerta_de": remetente, "plataforma": "seek",
+                 "por": "texto da âncora (link sem id)"},
+        ))
+
     for (plataforma, ident), canonica in achados.items():
         titulo = titulos.get((plataforma, ident), "")
         if not titulo:
