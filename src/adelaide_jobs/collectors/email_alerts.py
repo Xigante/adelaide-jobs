@@ -293,9 +293,7 @@ class EmailAlertsCollector(BaseCollector):
                 caixa.login(usuario, senha)
             except imaplib.IMAP4.error as exc:
                 raise CollectorError(
-                    f"login recusado para {usuario}. No Gmail isto quase sempre "
-                    f"é senha de app faltando ou verificação em duas etapas "
-                    f"desligada. Erro do servidor: {exc}"
+                    self._porque_recusou(usuario, senha, exc)
                 ) from exc
 
             ok, _ = caixa.select(f'"{pasta}"', readonly=True)
@@ -333,6 +331,42 @@ class EmailAlertsCollector(BaseCollector):
                 pass
 
         return vagas
+
+    @staticmethod
+    def _porque_recusou(usuario: str, senha: str, exc: object) -> str:
+        """Diz a causa provável em vez de repetir a lista de sempre.
+
+        A mensagem antiga mandava conferir a senha de app e a verificação
+        em duas etapas — as duas coisas que quem chegou até aqui já fez.
+        Aconteceu de verdade em 09/09: as duas estavam certas, e o que
+        tinha mudado era a senha DA CONTA. O Google revoga toda senha de
+        app quando a senha da conta muda, e não avisa em lugar nenhum.
+
+        A senha de app do Google é `[a-z]{16}`. Se o formato bate, o
+        problema não é digitação — é revogação.
+        """
+        formato_ok = bool(re.fullmatch(r"[a-z]{16}", senha or ""))
+        if not formato_ok:
+            n = len(senha or "")
+            return (
+                f"login recusado para {usuario}. A senha gravada tem {n} "
+                f"caractere(s) e a senha de app do Google tem exatamente 16 "
+                f"letras minúsculas, sem número e sem símbolo — então o que "
+                f"está no .env não é uma senha de app. Rode "
+                f"ferramentas\\CONFIGURAR-EMAIL.bat. "
+                f"Erro do servidor: {exc}"
+            )
+        return (
+            f"login recusado para {usuario}. A senha tem o formato certo "
+            f"(16 letras minúsculas), então não é erro de digitação. A causa "
+            f"mais provável, nesta ordem: (1) VOCÊ TROCOU A SENHA DA CONTA — "
+            f"o Google revoga TODAS as senhas de app quando isso acontece, e "
+            f"não avisa; (2) a senha de app foi apagada em "
+            f"myaccount.google.com/apppasswords. Nos dois casos a solução é a "
+            f"mesma: criar outra senha de app e rodar "
+            f"ferramentas\\CONFIGURAR-EMAIL.bat. "
+            f"Erro do servidor: {exc}"
+        )
 
     def _procurar(self, caixa: Any, desde: str, remetentes: list[str]) -> list[bytes]:
         """UIDs a buscar. Um SEARCH por remetente, porque OR do IMAP é

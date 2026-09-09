@@ -100,3 +100,41 @@ def test_um_email_com_varias_plataformas():
 def test_identificar_devolve_none_para_url_qualquer():
     assert identificar("https://www.google.com/search?q=jobs") is None
     assert identificar("https://www.seek.com.au/companies/acme") is None
+
+
+# ── a mensagem quando o login é recusado ────────────────────────────
+#
+# Aconteceu em 09/09: senha de app certa, verificação em duas etapas
+# ligada, e mesmo assim recusado — porque a senha DA CONTA tinha sido
+# trocada no dia anterior. A mensagem antiga mandava conferir as duas
+# coisas que já estavam certas, e não citava a única que importava.
+
+def _colector():
+    from adelaide_jobs.collectors.email_alerts import EmailAlertsCollector
+    return EmailAlertsCollector
+
+
+def test_formato_errado_diz_que_nao_e_senha_de_app():
+    txt = _colector()._porque_recusou("a@gmail.com", "minha-senha-1", "E")
+    assert "não é uma senha de app" in txt
+    assert "13 caractere" in txt
+    assert "CONFIGURAR-EMAIL.bat" in txt
+
+
+def test_formato_certo_acusa_a_troca_de_senha_da_conta():
+    txt = _colector()._porque_recusou("a@gmail.com", "abcdefghijklmnop", "E")
+    assert "TROCOU A SENHA DA CONTA" in txt
+    assert "revoga" in txt
+    assert "não é erro de digitação" in txt
+
+
+def test_a_senha_nunca_aparece_na_mensagem():
+    """A mensagem vai para a tela e vira print no chat."""
+    for senha in ("abcdefghijklmnop", "minha-senha-secreta"):
+        txt = _colector()._porque_recusou("a@gmail.com", senha, "E")
+        assert senha not in txt
+
+
+def test_senha_vazia_nao_quebra():
+    txt = _colector()._porque_recusou("a@gmail.com", "", "E")
+    assert "0 caractere" in txt
