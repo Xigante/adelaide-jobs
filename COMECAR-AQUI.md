@@ -42,6 +42,8 @@ atalho na área de trabalho. De 2 a 5 minutos.
 | `ferramentas\REPARAR-BANCO.bat` | só se der erro | reconstrói o banco de vagas sem perder nada |
 | `ferramentas\CONFIGURAR-EMAIL.bat` | uma vez | pergunta o e-mail e a senha de app e grava no `.env` para você |
 | `ferramentas\TESTAR-EMAIL.bat` | ao ligar os alertas | confere a caixa de alertas sem gastar cota |
+| `ferramentas\DIAGNOSTICAR-EMAIL.bat` | se um alerta parar de entrar | mostra o formato dos links, para achar o que mudou |
+| `ferramentas\LEVAR-PARA-OUTRO-PC.bat` | ao trocar de máquina | empacota o `.env` e o banco, que o GitHub não leva |
 
 Uma vez por dia, não mais: cada rodada gasta 173 das 250 chamadas
 diárias que a Adzuna dá de graça.

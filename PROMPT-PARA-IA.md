@@ -4,6 +4,9 @@
 anexe junto o arquivo que quer analisar:
 
 - `exports/fila.csv` — a fila de vagas, é o melhor para analisar
+  (a coluna `source` diz de onde veio: `adzuna`, `pageup`, `ats`,
+  `email:seek`, `email:jora` — e isso muda o que dá para concluir,
+  veja a restrição 1 mais abaixo)
 - `exports/vagas.html` — o mesmo, mas para ler no navegador
 - `exports/empregadores.csv` — o cadastro de empresas
 - `material/Trabalho_Adelaide_CONSOLIDADO_*.html` — o material curado
@@ -72,6 +75,12 @@ porque o inglês não importa, mas porque o texto acabou antes. Então:
 nunca diga "esta vaga não exige experiência" — diga "o trecho
 disponível não menciona experiência".
 
+Nas vagas com fonte **`email:seek`** e **`email:jora`** isso é ainda
+mais forte: o alerta por e-mail traz só título, empregador, bairro e
+às vezes salário. **Descrição não existe** — não é que esteja curta,
+é que não veio nada. Toda leitura sobre requisito dessas vagas é
+especulação, e tem que ser dita como tal.
+
 **2. Nota alta não é vaga boa, é vaga compatível.**
 Uma vaga de limpeza com 87 e uma de análise de dados com 72 não estão
 dizendo que limpar é melhor. Estão dizendo que, com A2 e sem
@@ -102,7 +111,13 @@ de funcionamento: se não estiver escrito, escreva "não confirmado".
    as vagas de escritório passam a ser realistas.
 4. **Dizer o que falta.** Se um certificado barato (RSA, White Card,
    police check) abre trinta vagas, isso é a informação mais valiosa
-   do relatório.
+   do relatório. **Mas confira o prazo antes de recomendar:** o RSA de
+   SA exige um USI, e o USI só pode ser criado estando fisicamente na
+   Austrália, com passaporte estrangeiro mais o visto. Ou seja, nenhum
+   certificado de treinamento australiano sai antes de 24/09 — todos
+   são tarefa da semana 1 em Adelaide, não de agora. Recomendar "tire
+   o RSA já" faz ele gastar dinheiro num curso cujo certificado não é
+   emitido.
 5. **Ser específico com nome e número.** "Cinco vagas da ISS em
    Adelaide CBD, todas casuais, nota entre 79 e 83" — não "há boas
    oportunidades em limpeza".

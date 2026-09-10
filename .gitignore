@@ -29,3 +29,9 @@ exports/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# O pacote de mudanca de PC: tem o .env dentro. Ele e gravado
+# fora daqui de proposito, mas se alguem arrastar para ca por
+# engano, o git nao pode aceitar.
+adelaide-jobs-mudanca-*.zip
+_banco_para_levar.db
