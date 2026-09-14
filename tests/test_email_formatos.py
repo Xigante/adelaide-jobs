@@ -238,3 +238,31 @@ def test_o_formato_antigo_continua_funcionando():
     vagas = parse_email(_email_seek(html))
     assert len(vagas) == 1
     assert vagas[0].source == "email:jora"
+
+
+# ── o aviso tem que dizer QUEM ──────────────────────────────────────
+#
+# "e-mail 59 não rendeu nenhuma vaga" manda a pessoa abrir a caixa e
+# contar mensagem por mensagem até a 59. O UID do IMAP não aparece em
+# lugar nenhum do Gmail.
+
+def test_o_aviso_identifica_o_remetente():
+    from adelaide_jobs.collectors.email_alerts import _quem_mandou
+    bruto = (b'From: "SEEK Recommendations" <noreply@email.seek.com.au>\r\n'
+             b'Subject: Business Analyst + 11 new jobs\r\n\r\ncorpo')
+    txt = _quem_mandou(bruto)
+    assert "noreply@email.seek.com.au" in txt
+    assert "Business Analyst" in txt
+    assert "SEEK Recommendations" not in txt, "nome de exibição é ruído"
+
+
+def test_cabecalho_ilegivel_nao_quebra():
+    from adelaide_jobs.collectors.email_alerts import _quem_mandou
+    assert _quem_mandou(b"nada disso e um e-mail")
+
+
+def test_assunto_codificado_e_decodificado():
+    from adelaide_jobs.collectors.email_alerts import _quem_mandou
+    bruto = (b"From: <no-reply@adzuna.com.au>\r\n"
+             b"Subject: =?UTF-8?B?VmFnYXMgbm92YXM=?=\r\n\r\ncorpo")
+    assert "Vagas novas" in _quem_mandou(bruto)

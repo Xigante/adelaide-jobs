@@ -241,6 +241,29 @@ def _partes(msg: Message) -> tuple[str, str]:
     return texto, html
 
 
+def _quem_mandou(bruto: bytes) -> str:
+    """Remetente e assunto de um e-mail, curtos, para mensagem de erro.
+
+    O aviso antigo dizia "e-mail 59 não rendeu nenhuma vaga". O 59 é o
+    UID do IMAP: não dá para achar na caixa sem contar mensagem por
+    mensagem. Quem manda e qual o assunto resolvem na hora — dá para
+    ver se é um alerta de verdade ou propaganda, e de qual plataforma.
+    """
+    try:
+        msg = email.message_from_bytes(bruto)
+        de = str(email.header.make_header(
+            email.header.decode_header(msg.get("From", "?"))))
+        assunto = str(email.header.make_header(
+            email.header.decode_header(msg.get("Subject", ""))))
+    except Exception:  # noqa: BLE001
+        return "um e-mail que não deu para ler o cabeçalho"
+    # Só o endereço, sem o nome de exibição, que costuma ser comprido.
+    m = re.search(r"<([^>]+)>", de)
+    if m:
+        de = m.group(1)
+    return f"{de.strip()[:48]} — {' '.join(assunto.split())[:52]!r}"
+
+
 def _data_do_email(msg: Message) -> date | None:
     bruto = msg.get("Date")
     if not bruto:
@@ -412,10 +435,12 @@ class EmailAlertsCollector(BaseCollector):
                     self.note_error(f"e-mail {uid.decode()}: {type(exc).__name__}: {exc}")
                     continue
                 if not achadas:
-                    # Sinal de que um template mudou. Vale saber.
+                    # Sinal de que um template mudou. Vale saber — e vale
+                    # saber DE QUEM: "e-mail 59" não diz nada, e a única
+                    # saída era abrir a caixa e contar mensagens até a 59.
                     self.note_error(
-                        f"e-mail {uid.decode()} não rendeu nenhuma vaga "
-                        "— o layout do remetente pode ter mudado"
+                        f"nada extraído de {_quem_mandou(dados[0][1])} "
+                        f"— o layout desse remetente pode ter mudado"
                     )
                 vagas.extend(achadas)
         finally:
