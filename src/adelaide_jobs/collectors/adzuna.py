@@ -12,6 +12,7 @@ pipeline, e é por onde começar.
 from __future__ import annotations
 
 import logging
+import time
 import os
 from datetime import datetime
 from typing import Any
@@ -91,6 +92,7 @@ class AdzunaCollector(BaseCollector):
             )
 
         jobs: list[Job] = []
+        self._orcamento_retry = self.RETRY_MAX
         with httpx.Client(timeout=30.0, headers={"User-Agent": USER_AGENT}) as client:
             for rotulo, extra, paginas in varreduras:
                 antes = len(jobs)
@@ -106,19 +108,15 @@ class AdzunaCollector(BaseCollector):
                         **extra,
                     }
                     url = BASE_URL.format(country=country, page=page)
-                    try:
-                        resp = client.get(url, params=params)
-                    except httpx.HTTPError as exc:
-                        self.note_error(f"rede em {rotulo!r} p{page}: {exc}")
-                        break
-                    if resp.status_code == 429:
-                        self.note_error(
-                            f"429 — limite diário da Adzuna atingido em {rotulo!r}. "
-                            f"Parando com {len(jobs)} vagas já coletadas."
-                        )
-                        return jobs
-                    if resp.status_code != 200:
-                        self.note_error(f"HTTP {resp.status_code} em {rotulo!r} p{page}")
+                    resp, erro = self._pedir(client, url, params, rotulo, page)
+                    if resp is None:
+                        if erro == "cota":
+                            self.note_error(
+                                f"429 — limite diário da Adzuna atingido em "
+                                f"{rotulo!r}. Parando com {len(jobs)} vagas já "
+                                f"coletadas."
+                            )
+                            return jobs
                         break
 
                     results = resp.json().get("results") or []
@@ -127,6 +125,61 @@ class AdzunaCollector(BaseCollector):
                         break
                 log.info("[adzuna] %s -> %d", rotulo, len(jobs) - antes)
         return jobs
+
+    # ── Repetir quando o servidor tropeça ───────────────────────────
+    #
+    # 14/09: 44 erros numa coleta, quase todos "HTTP 502" — Bad Gateway,
+    # que é a Adzuna caindo do lado dela, não pedido errado do nosso.
+    # Sem repetição, um 502 na PÁGINA 1 matava a categoria inteira:
+    # admin-jobs, accounting-finance, consultancy e hr voltaram vazias
+    # naquele dia, e são justamente as de escritório.
+    #
+    # Repetir custa cota, então tem orçamento: no máximo TENTATIVAS por
+    # pedido e RETRY_MAX no total da rodada. Um dia ruim da Adzuna não
+    # pode gastar as 250 chamadas em repetição e deixar a coleta pela
+    # metade.
+    TENTATIVAS = 3
+    ESPERAS = (1.5, 4.0, 9.0)
+    RETRY_MAX = 25
+    TRANSITORIO = frozenset({500, 502, 503, 504, 408})
+
+    def _pedir(self, client, url, params, rotulo, page):
+        """(resposta, motivo). Resposta None = desistiu.
+
+        motivo: 'cota' quando é 429 (o chamador para tudo), senão o que
+        aconteceu, já registrado como erro.
+        """
+        ultimo = ""
+        for tentativa in range(self.TENTATIVAS):
+            try:
+                resp = client.get(url, params=params)
+            except httpx.HTTPError as exc:
+                ultimo = f"rede: {exc}"
+            else:
+                if resp.status_code == 200:
+                    if tentativa:
+                        log.info("[adzuna] %s p%d ok na tentativa %d",
+                                 rotulo, page, tentativa + 1)
+                    return resp, ""
+                if resp.status_code == 429:
+                    return None, "cota"
+                if resp.status_code not in self.TRANSITORIO:
+                    # 400, 401, 404: repetir não conserta pedido errado.
+                    self.note_error(
+                        f"HTTP {resp.status_code} em {rotulo!r} p{page}")
+                    return None, "permanente"
+                ultimo = f"HTTP {resp.status_code}"
+
+            se_sobra = getattr(self, "_orcamento_retry", self.RETRY_MAX)
+            if tentativa == self.TENTATIVAS - 1 or se_sobra <= 0:
+                break
+            self._orcamento_retry = se_sobra - 1
+            time.sleep(self.ESPERAS[tentativa])
+
+        self.note_error(
+            f"{ultimo} em {rotulo!r} p{page} — desisti depois de "
+            f"{self.TENTATIVAS} tentativas")
+        return None, "transitorio"
 
     # Separado de `collect` de propósito: é isto que os testes exercitam,
     # com fixture salva em disco, sem tocar na rede.
