@@ -15,6 +15,9 @@
 # aparece como um comando "não reconhecido" no meio da execução.
 *.bat  text eol=crlf
 *.cmd  text eol=crlf
+# O PowerShell le LF sem reclamar, mas deixar .ps1 com regra
+# diferente dos .bat que ele acompanha e pedir confusao depois.
+*.ps1  text eol=crlf
 
 # Todo o resto em LF, inclusive no Windows.
 *.py    text eol=lf
