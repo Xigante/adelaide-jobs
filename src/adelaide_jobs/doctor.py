@@ -28,8 +28,27 @@ class Check:
         return f"[{mark}] {self.name:<30} {self.detail}"
 
 
+def _url_adzuna() -> str:
+    """Um pedido de verdade, com as chaves dele.
+
+    O teste antigo batia em /v1/api/version SEM credencial, e a Adzuna
+    responde 400 a isso. Resultado: "[FALHA] Adzuna API HTTP 400" em
+    toda instalacao, inclusive nas que coletam 500 vagas por dia. Um
+    alarme que sempre toca nao e alarme — e o Pedro passou por uma
+    mudanca de PC achando que a chave dele tinha quebrado.
+
+    Agora o teste faz o mesmo que o coletor faz: uma busca de 1
+    resultado. Se responder 200, a chave funciona. Se responder 401,
+    a chave esta errada — e ai a falha quer dizer alguma coisa.
+    """
+    ident = os.getenv("ADZUNA_APP_ID", "")
+    chave = os.getenv("ADZUNA_APP_KEY", "")
+    return ("https://api.adzuna.com/v1/api/jobs/au/search/1"
+            f"?app_id={ident}&app_key={chave}&results_per_page=1"
+            "&where=Adelaide&content-type=application/json")
+
+
 PROBES: list[tuple[str, str]] = [
-    ("Adzuna API", "https://api.adzuna.com/v1/api/version"),
     ("SmartRecruiters", "https://api.smartrecruiters.com/v1/companies/McDonaldsAustralia/postings?limit=1"),
     ("Greenhouse", "https://boards-api.greenhouse.io/v1/boards/gitlab/jobs"),
     ("McDonald's AU", "https://careers.mcdonalds.com.au/robots.txt"),
@@ -48,7 +67,14 @@ def check_env() -> list[Check]:
         ("GOOGLE_SHEETS_ID", "Google Sheets id"),
     ]:
         val = os.getenv(var, "")
-        checks.append(Check(label, bool(val), "definido" if val else f"{var} vazio no .env"))
+        # O Google Sheets nunca foi ligado. Marcar como FALHA todo dia
+        # treina a pessoa a ignorar a coluna de falhas — e ai a falha
+        # que importa passa despercebida no meio.
+        opcional = var.startswith("GOOGLE_SHEETS")
+        checks.append(Check(
+            label, bool(val) or opcional,
+            "definido" if val else ("nao usado (opcional)" if opcional
+                                    else f"{var} vazio no .env")))
     return checks
 
 
@@ -62,7 +88,11 @@ def check_optional_packages() -> list[Check]:
             __import__(mod)
             checks.append(Check(label, True, "instalado"))
         except ImportError:
-            checks.append(Check(label, False, f'pip install "adelaide-jobs{extra}"'))
+            opcional = extra == "[sheets]"
+            checks.append(Check(
+                label, opcional,
+                "nao usado (opcional)" if opcional
+                else f'pip install "adelaide-jobs{extra}"'))
     return checks
 
 
@@ -70,7 +100,7 @@ def check_network(timeout: float = 15.0) -> list[Check]:
     checks = []
     headers = {"User-Agent": USER_AGENT, "Accept": "application/json,*/*"}
     with httpx.Client(timeout=timeout, headers=headers, follow_redirects=True) as client:
-        for name, url in PROBES:
+        for name, url in [("Adzuna API", _url_adzuna()), *PROBES]:
             try:
                 resp = client.get(url)
             except (httpx.HTTPError, socket.gaierror) as exc:

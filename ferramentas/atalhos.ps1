@@ -6,7 +6,7 @@
 # -File, da para ler e mexer.
 $ErrorActionPreference = 'Stop'
 
-$aqui = $env:AQUI.TrimEnd('\')
+$aqui = $env:AQUI_PS.TrimEnd('\')
 $desk = [Environment]::GetFolderPath('Desktop')
 if (-not $desk) { Write-Output 'SEM-DESKTOP'; exit 3 }
 
