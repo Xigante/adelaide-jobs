@@ -14,7 +14,11 @@ rem  Acha a pasta do projeto a partir deste arquivo: ao lado do
 rem  pyproject.toml, uma pasta acima, ou dentro de adelaide-jobs\.
 rem  Assim o mesmo .bat funciona em ferramentas\ e solto na pasta de cima.
 set "AQUI=%~dp0"
-set "AQUI=%AQUI:~0,-1%"
+REM  O .ps1 quer o caminho SEM a barra final; as buscas abaixo
+REM  querem COM. Duas variaveis, entao. Juntar as duas foi o que
+REM  quebrou este arquivo em 16/09: %AQUI%pyproject.toml virava
+REM  "...ferramentaspyproject.toml" e nunca achava nada.
+set "AQUI_PS=%AQUI:~0,-1%"
 set "PROJ="
 if exist "%AQUI%pyproject.toml" for %%I in ("%AQUI%.") do set "PROJ=%%~fI"
 if not defined PROJ if exist "%AQUI%..\pyproject.toml" for %%I in ("%AQUI%..") do set "PROJ=%%~fI"
