@@ -57,8 +57,9 @@ REM  e impossivel isto aqui destruir um rebase de verdade.
 REM ---------------------------------------------------------------
 rd /q ".git\rebase-merge" >nul 2>&1
 rd /q ".git\rebase-apply" >nul 2>&1
-if exist ".git\rebase-merge" echo   [!]    Rebase pela metade em .git\rebase-merge. Me mande esta tela.
-if exist ".git\rebase-apply" echo   [!]    Rebase pela metade em .git\rebase-apply. Me mande esta tela.
+if exist ".git\rebase-merge" powershell -NoProfile -Command "Remove-Item -LiteralPath '.git\rebase-merge' -Recurse -Force -ErrorAction SilentlyContinue" >nul 2>&1
+if exist ".git\rebase-apply" powershell -NoProfile -Command "Remove-Item -LiteralPath '.git\rebase-apply' -Recurse -Force -ErrorAction SilentlyContinue" >nul 2>&1
+if exist ".git\rebase-merge" echo   [!]    O OneDrive esta segurando .git\rebase-merge. Sigo assim mesmo.
 
 REM ---------------------------------------------------------------
 REM  O Git Credential Manager abre o navegador para voce entrar.
@@ -106,7 +107,15 @@ REM  sem commit de juncao e sem perder nada.
 REM ---------------------------------------------------------------
 echo   [..]   Trazendo o que mudou no GitHub...
 git pull --rebase origin main
+if not errorlevel 1 goto PULL_OK
+echo.
+REM  O rebase pode estar barrado por uma pasta .git\rebase-merge que
+REM  o OneDrive teima em recriar. O merge nao usa essa maquina, entao
+REM  passa por cima do problema. Custa um commit de juncao a mais.
+echo   [..]   O rebase nao passou. Juntando por merge...
+git pull --no-rebase --no-edit origin main
 if errorlevel 1 goto ERRO_PULL
+:PULL_OK
 echo   [ok]   Em dia com o GitHub.
 echo.
 
@@ -158,6 +167,7 @@ rd /q ".git\rebase-merge" >nul 2>&1
 echo   Desfiz a juncao pela metade. NADA foi perdido: o seu trabalho
 echo   continua aqui, do jeito que estava antes de eu tentar.
 echo.
+echo   Tentei das duas formas, rebase e merge, e nenhuma passou.
 echo   Isso acontece quando o MESMO arquivo mudou nos dois
 echo   computadores. Copie as linhas acima e me mande.
 goto FIM
