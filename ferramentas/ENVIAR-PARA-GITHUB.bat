@@ -48,6 +48,19 @@ if exist ".git\index.lock" del /f /q ".git\index.lock" >nul 2>&1
 if exist ".git\HEAD.lock" del /f /q ".git\HEAD.lock" >nul 2>&1
 
 REM ---------------------------------------------------------------
+REM  Pasta de rebase VAZIA que ficou para tras trava todo pull.
+REM  O git so olha se ela existe. No Windows com OneDrive, o
+REM  'rebase --abort' apaga o conteudo mas as vezes nao a pasta,
+REM  porque o OneDrive esta segurando ela.
+REM  'rd' SEM /s so remove pasta vazia e falha se tiver algo dentro:
+REM  e impossivel isto aqui destruir um rebase de verdade.
+REM ---------------------------------------------------------------
+rd /q ".git\rebase-merge" >nul 2>&1
+rd /q ".git\rebase-apply" >nul 2>&1
+if exist ".git\rebase-merge" echo   [!]    Rebase pela metade em .git\rebase-merge. Me mande esta tela.
+if exist ".git\rebase-apply" echo   [!]    Rebase pela metade em .git\rebase-apply. Me mande esta tela.
+
+REM ---------------------------------------------------------------
 REM  O Git Credential Manager abre o navegador para voce entrar.
 REM  Sem token para colar, sem token para vazar.
 REM ---------------------------------------------------------------
@@ -141,6 +154,7 @@ echo   [ERRO] Nao consegui juntar o que esta no GitHub com o que
 echo          esta neste computador.
 echo.
 git rebase --abort >nul 2>&1
+rd /q ".git\rebase-merge" >nul 2>&1
 echo   Desfiz a juncao pela metade. NADA foi perdido: o seu trabalho
 echo   continua aqui, do jeito que estava antes de eu tentar.
 echo.
