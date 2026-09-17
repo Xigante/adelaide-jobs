@@ -1,9 +1,0 @@
-# Tudo o que estiver nesta pasta fica FORA do git, de proposito.
-#
-# O repositorio adelaide-jobs e publico. Os modelos na pasta de cima
-# podem ser publicos porque nao tem telefone nem e-mail. A versao que
-# voce preenche tem, e nao pode subir.
-#
-# Nao apague este arquivo.
-*
-!.gitignore

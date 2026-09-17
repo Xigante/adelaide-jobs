@@ -84,6 +84,19 @@ if errorlevel 1 (
 )
 echo.
 
+REM ---------------------------------------------------------------
+REM  Sao dois computadores agora. Quem enviou por ultimo deixa o
+REM  GitHub na frente do outro, e o push do outro morre com
+REM  'fetch first'. Trazer antes de mandar resolve isso sozinho.
+REM  --rebase poe o que voce fez aqui EM CIMA do que ja estava la,
+REM  sem commit de juncao e sem perder nada.
+REM ---------------------------------------------------------------
+echo   [..]   Trazendo o que mudou no GitHub...
+git pull --rebase origin main
+if errorlevel 1 goto ERRO_PULL
+echo   [ok]   Em dia com o GitHub.
+echo.
+
 echo   ---------------------------------------------------
 echo    Commits que vao subir:
 echo   ---------------------------------------------------
@@ -122,6 +135,19 @@ if errorlevel 2 goto FIM
 start "" "https://github.com/Xigante/adelaide-jobs/settings/pages"
 goto FIM
 
+:ERRO_PULL
+echo.
+echo   [ERRO] Nao consegui juntar o que esta no GitHub com o que
+echo          esta neste computador.
+echo.
+git rebase --abort >nul 2>&1
+echo   Desfiz a juncao pela metade. NADA foi perdido: o seu trabalho
+echo   continua aqui, do jeito que estava antes de eu tentar.
+echo.
+echo   Isso acontece quando o MESMO arquivo mudou nos dois
+echo   computadores. Copie as linhas acima e me mande.
+goto FIM
+
 :ERRO_PUSH
 echo.
 echo   [ERRO] O envio falhou.
@@ -131,9 +157,9 @@ echo.
 echo   1. Login recusado. Rode este comando e tente de novo:
 echo        git credential-manager github login
 echo.
-echo   2. Alguem mudou o repositorio no site. Rode:
-echo        git pull --rebase origin main
-echo      e depois este .bat outra vez.
+echo   2. O GitHub esta na frente deste computador. Este botao ja
+echo      tenta resolver sozinho antes de enviar, entao se voce
+echo      chegou aqui e outra coisa. Me mande a mensagem.
 echo.
 echo   Copie a mensagem de erro acima e me mande.
 goto FIM
