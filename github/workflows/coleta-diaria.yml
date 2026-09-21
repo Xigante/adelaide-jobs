@@ -1,0 +1,145 @@
+# Coleta diária na nuvem, e o resultado no seu e-mail.
+#
+# Por que existe: a partir de 24/09/2026 você está em Adelaide e pode
+# não ter um PC ligado todo dia. Aqui o GitHub roda por conta própria.
+#
+# POR QUE E-MAIL, E NÃO UMA PÁGINA
+#   O relatório de vagas é justamente o que este projeto decidiu não
+#   publicar: traz o seu nome, o seu visto e uma nota por empregador.
+#   Um gerente de Adelaide não deveria achar isso ao te googlar.
+#   E-mail chega no celular e não fica público.
+#
+# O QUE ESTE ROBÔ NÃO FAZ, DE PROPÓSITO
+#   Ele não mexe na página xigante.github.io/adelaide-jobs. Aquela
+#   página tem duas partes: o Diretório de 269 empregadores, feito à
+#   mão (nunca muda sozinho), e a aba Empresas, que o aba-empresas.py
+#   regenera a cada coleta a partir do banco. O banco daqui começa
+#   VAZIO — então rodar aba-empresas.py na nuvem substituiria as ~2.995
+#   empresas da sua página por meia dúzia. Medido: a página cai de
+#   731 KB para 512 KB. Publicar continua sendo trabalho do notebook,
+#   que tem o banco cheio.
+#
+# ANTES DE FUNCIONAR, faltam os segredos. No GitHub:
+#   Settings -> Secrets and variables -> Actions -> New repository secret
+#     ADZUNA_APP_ID     (está no seu .env)
+#     ADZUNA_APP_KEY    (está no seu .env)
+#     IMAP_USER         (o e-mail que recebe os alertas de vaga)
+#     IMAP_PASSWORD     (a SENHA DE APP do Gmail, 16 letras, nunca a
+#                        senha da conta — a mesma serve para ler e enviar)
+#     EMAIL_DESTINO     (opcional: para onde mandar. Sem isto, vai para
+#                        o próprio IMAP_USER)
+#   Você digita, ninguém mais lê — nem eu, nem o log desta execução.
+#
+# CUIDADO COM A COTA DA ADZUNA: são 250 chamadas por dia e uma coleta
+# gasta 173. Com isto ligado, não rode também o ATUALIZAR-VAGAS.bat no
+# mesmo dia — a segunda coleta bate no teto e volta cheia de erro.
+
+name: Coleta diária
+
+on:
+  schedule:
+    # 20:30 UTC = 06:00 em Adelaide no horário normal (ACST, UTC+9:30),
+    # 07:00 no horário de verão (ACDT, do 1o domingo de outubro). O cron
+    # do GitHub é sempre UTC e não conhece horário de verão; a hora local
+    # anda uma hora em outubro e tudo bem.
+    - cron: "30 20 * * *"
+  # Dá o botão "Run workflow" na aba Actions — funciona no navegador do
+  # celular. É assim que você dispara fora de hora.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Duas coletas ao mesmo tempo brigariam pelo mesmo banco e pela mesma
+# cota da Adzuna. Se uma já estiver rodando, a outra espera.
+concurrency:
+  group: coleta
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar o programa
+        run: pip install -e ".[ats]"
+
+      # O servidor é destruído no fim de cada execução. Sem isto, toda
+      # coleta começaria de um banco vazio — e é o histórico que faz a
+      # deduplicação e a detecção de vaga fantasma funcionarem. A chave
+      # usa o run_id para SEMPRE gravar uma cópia nova; o restore-keys
+      # traz a mais recente que existir.
+      - name: Trazer o banco da execução anterior
+        uses: actions/cache@v4
+        with:
+          path: banco
+          key: jobs-db-${{ github.run_id }}
+          restore-keys: |
+            jobs-db-
+
+      - name: Coletar
+        env:
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          IMAP_HOST: imap.gmail.com
+          IMAP_PORT: "993"
+          IMAP_USER: ${{ secrets.IMAP_USER }}
+          IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
+          IMAP_FOLDER: INBOX
+        run: |
+          mkdir -p banco
+          adelaide-jobs --db banco/jobs.db collect
+
+      # A mesma cadeia que o ATUALIZAR-VAGAS.bat roda no PC, menos os
+      # dois passos que mexem na página publicada.
+      - name: Recalcular as notas
+        run: adelaide-jobs --db banco/jobs.db score --rescore
+
+      - name: Gerar a planilha da fila
+        run: adelaide-jobs --db banco/jobs.db export
+
+      # O collect sai com código 0 mesmo quando TODA fonte falha — de
+      # propósito, para uma fonte quebrada não derrubar as outras. Bom
+      # para o programa, péssimo para um robô: sem esta conferência ele
+      # ficaria verde por semanas sem trazer vaga nenhuma.
+      - name: Conferir se veio vaga mesmo
+        run: |
+          python - <<'PY'
+          import sqlite3, sys, pathlib
+          banco = pathlib.Path("banco/jobs.db")
+          if not banco.exists():
+              sys.exit("FALHOU: o banco nem foi criado.")
+          c = sqlite3.connect(banco)
+          vagas = c.execute("select count(*) from job_cluster").fetchone()[0]
+          vistas = c.execute("select count(*) from job_sighting").fetchone()[0]
+          empresas = c.execute("select count(*) from employer").fetchone()[0]
+          # So contagens no log. O log de um repositorio publico e
+          # publico, e titulo de vaga com nota ao lado e exatamente o
+          # que este projeto decidiu nao deixar na internet.
+          print(f"vagas no banco : {vagas}")
+          print(f"aparicoes      : {vistas}")
+          print(f"empresas       : {empresas}")
+          print(f"tamanho        : {banco.stat().st_size/1_000_000:.1f} MB")
+          if vagas == 0:
+              sys.exit(
+                  "FALHOU: nenhuma vaga no banco.\n"
+                  "Quase sempre e segredo faltando ou errado: confira\n"
+                  "ADZUNA_APP_ID, ADZUNA_APP_KEY, IMAP_USER e IMAP_PASSWORD\n"
+                  "em Settings -> Secrets and variables -> Actions."
+              )
+          PY
+
+      - name: Mandar a fila por e-mail
+        env:
+          IMAP_USER: ${{ secrets.IMAP_USER }}
+          IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+        run: python ferramentas/enviar_por_email.py --db banco/jobs.db
